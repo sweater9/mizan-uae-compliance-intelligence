@@ -1,0 +1,26 @@
+name: Production QA
+on:
+  pull_request:
+  push:
+    branches: [agent-b-production-qa]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+        env:
+          NVIDIA_API_KEY: qa-build-secret-sentinel
+      - run: npm run build:pages
+        env:
+          VITE_API_BASE_URL: https://example.invalid
+      - run: node scripts/check-client.mjs

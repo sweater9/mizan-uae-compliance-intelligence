@@ -7,7 +7,7 @@ services:
     autoDeploy: true
     buildCommand: npm ci && npm run build
     startCommand: npm run start
-    healthCheckPath: /api/health
+    healthCheckPath: /api/ready
     envVars:
       - key: NODE_VERSION
         value: 22.13.0

@@ -1,7 +1,2 @@
-export function GET() {
-  return Response.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    hasNvidiaKey: Boolean(process.env.NVIDIA_API_KEY),
-  });
-}
+import { health } from '../../../server/health.mjs';
+export function GET() { return health(); }
