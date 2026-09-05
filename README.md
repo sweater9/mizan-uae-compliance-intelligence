@@ -30,6 +30,43 @@ Scripts that need writable project-scoped home, npm, XDG, and temporary paths us
 - `examples/d1/` contains an optional D1 example surface
 - `drizzle.config.ts` supports local migration generation when needed
 
+## NVIDIA assistant integration
+
+The production Worker exposes `POST /api/assistant` and keeps the NVIDIA API
+key server-side. The request body must be JSON in the form
+`{"question":"..."}`. The default model is
+`meta/llama-3.3-70b-instruct`; set `NVIDIA_MODEL` to override it.
+
+For a Cloudflare deployment, store the key as a Worker secret rather than in
+the repository:
+
+```sh
+npx wrangler secret put NVIDIA_API_KEY
+```
+
+You can also add it in **Cloudflare Dashboard → Workers & Pages → your Worker
+→ Settings → Variables and Secrets → Add → Secret**, using the exact name
+`NVIDIA_API_KEY`. Paste the NVIDIA key into the secret value field and save it.
+Do not put it in GitHub Pages settings, `VITE_*` variables, committed files, or
+the browser.
+
+Set `NVIDIA_MODEL` as a non-secret Worker variable if you need a different
+model. The GitHub Pages build is static and must not receive the API key; use
+the Worker endpoint for live NVIDIA-backed requests.
+
+### Render deployment
+
+Render is also supported. Create a Render **Web Service** from this repository,
+or use the included `render.yaml` Blueprint. It uses:
+
+- Build command: `npm ci && npm run build`
+- Start command: `npm run start`
+
+In **Render → service → Environment**, add `NVIDIA_API_KEY` as a secret
+environment variable. Optionally set `NVIDIA_MODEL`; the default is
+`meta/llama-3.3-70b-instruct`. Render runs the server-side
+`app/api/assistant/route.ts`, so the browser never receives the key.
+
 ## Workspace Auth Headers
 
 OpenAI workspace sites can read the current user's email from
