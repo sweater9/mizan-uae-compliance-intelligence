@@ -59,7 +59,8 @@ function Assistant({duties,go}:{duties:Duty[];go:(s:string)=>void}){
  const ask=async(question:string)=>{
   setQ(question);setAnswer("");setError("");setLoading(true);
   try{
-   const response=await fetch("/api/assistant",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question})});
+   const apiBase=import.meta.env.VITE_API_BASE_URL||"";
+   const response=await fetch(`${apiBase}/api/assistant`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question})});
    const payload=await response.json() as {answer?:string;error?:string};
    if(!response.ok) throw new Error(payload.error||"The assistant is unavailable.");
    setAnswer(payload.answer||"");
