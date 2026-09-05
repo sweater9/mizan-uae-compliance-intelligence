@@ -1,11 +1,13 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { publicTrialDenial, publicTrialResponse } from "../app/public-trial.mjs";
 
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
   NVIDIA_API_KEY?: string;
+  PUBLIC_TRIAL_START_AT?: string;
   NVIDIA_MODEL?: string;
   IMAGES: {
     input(stream: ReadableStream): {
@@ -25,9 +27,13 @@ const NVIDIA_CHAT_COMPLETIONS_URL = "https://integrate.api.nvidia.com/v1/chat/co
 const DEFAULT_NVIDIA_MODEL = "meta/llama-3.3-70b-instruct";
 
 async function handleAssistant(request: Request, env: Env): Promise<Response> {
+  if (request.method === "GET") return publicTrialResponse(env.PUBLIC_TRIAL_START_AT);
   if (request.method !== "POST") {
     return Response.json({ error: "Method not allowed" }, { status: 405 });
   }
+
+  const denial = publicTrialDenial(env.PUBLIC_TRIAL_START_AT);
+  if (denial) return denial;
 
   if (!env.NVIDIA_API_KEY) {
     return Response.json(

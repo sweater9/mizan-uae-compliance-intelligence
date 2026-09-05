@@ -1,3 +1,5 @@
+import { publicTrialDenial, publicTrialResponse } from "../../public-trial.mjs";
+
 const NVIDIA_CHAT_COMPLETIONS_URL =
   `${process.env.NVIDIA_NIM_BASE_URL || "https://integrate.api.nvidia.com/v1"}/chat/completions`;
 const DEFAULT_NVIDIA_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b";
@@ -5,7 +7,7 @@ const DEFAULT_NVIDIA_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b";
 function withCors(response: Response): Response {
   const headers = new Headers(response.headers);
   headers.set("Access-Control-Allow-Origin", process.env.CORS_ORIGIN || "*");
-  headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   headers.set("Access-Control-Allow-Headers", "Content-Type");
   return new Response(response.body, { status: response.status, headers });
 }
@@ -14,8 +16,14 @@ export function OPTIONS() {
   return withCors(new Response(null, { status: 204 }));
 }
 
+export function GET() {
+  return withCors(publicTrialResponse(process.env.PUBLIC_TRIAL_START_AT));
+}
+
 export async function POST(request: Request) {
   try {
+    const denial = publicTrialDenial(process.env.PUBLIC_TRIAL_START_AT);
+    if (denial) return withCors(denial);
     const apiKey = process.env.NVIDIA_API_KEY;
     if (!apiKey) {
       return withCors(Response.json(
