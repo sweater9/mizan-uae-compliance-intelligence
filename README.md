@@ -50,7 +50,7 @@ You can also add it in **Cloudflare Dashboard → Workers & Pages → your Worke
 Do not put it in GitHub Pages settings, `VITE_*` variables, committed files, or
 the browser.
 
-Set `NVIDIA_MODEL` as a non-secret Worker variable if you need a different
+Set `NVIDIA_NIM_MODEL` as a non-secret Worker variable if you need a different
 model. The GitHub Pages build is static and must not receive the API key; use
 the Worker endpoint for live NVIDIA-backed requests.
 
@@ -63,9 +63,10 @@ or use the included `render.yaml` Blueprint. It uses:
 - Start command: `npm run start`
 
 In **Render → service → Environment**, add `NVIDIA_API_KEY` as a secret
-environment variable. Optionally set `NVIDIA_MODEL`; the default is
-`meta/llama-3.3-70b-instruct`. Render runs the server-side
+environment variable. Set `CORS_ORIGIN` to the exact public origin allowed to
+call the API, and optionally override `NVIDIA_NIM_MODEL`. Render runs the server-side
 `app/api/assistant/route.ts`, so the browser never receives the key.
+Use `/api/health` as the service health endpoint.
 
 ## Workspace Auth Headers
 
