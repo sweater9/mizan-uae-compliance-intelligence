@@ -68,6 +68,18 @@ call the API, and optionally override `NVIDIA_NIM_MODEL`. Render runs the server
 `app/api/assistant/route.ts`, so the browser never receives the key.
 Use `/api/health` as the service health endpoint.
 
+To connect the GitHub Pages frontend to the Render backend, add this GitHub
+Actions repository variable under **Settings → Secrets and variables → Actions
+→ Variables**:
+
+```text
+VITE_API_BASE_URL=https://your-render-service.onrender.com
+```
+
+Use the exact Render service URL without a trailing slash. Set Render's
+`CORS_ORIGIN` to `https://sweater9.github.io` (or your custom frontend origin),
+then redeploy the Pages workflow.
+
 ## Workspace Auth Headers
 
 OpenAI workspace sites can read the current user's email from
