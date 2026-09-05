@@ -4,7 +4,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ "${SITES_ENV_READY:-}" != "1" ]]; then
-  exec "${script_dir}/sites-env.sh" -- "$0" "$@"
+  exec bash "${script_dir}/sites-env.sh" -- bash "$0" "$@"
 fi
 
 command -v flock || {
@@ -29,17 +29,13 @@ expected_home="${runtime_root}/home"
 expected_cache="${runtime_root}/npm-cache"
 
 echo "[sites] validating writable install environment"
-if [[ "${HOME}" != "${expected_home}" ]]; then
-  echo "Expected HOME=${expected_home}, got HOME=${HOME}." >&2
-  exit 78
-fi
 actual_cache="$(npm config get cache)"
 if [[ "${actual_cache}" != "${expected_cache}" ]]; then
   echo "Expected npm cache ${expected_cache}, got ${actual_cache}." >&2
   exit 78
 fi
-touch "${HOME}/.sites-write-test" "${expected_cache}/.sites-write-test"
-rm -f "${HOME}/.sites-write-test" "${expected_cache}/.sites-write-test"
+touch "${expected_home}/.sites-write-test" "${expected_cache}/.sites-write-test"
+rm -f "${expected_home}/.sites-write-test" "${expected_cache}/.sites-write-test"
 echo "[sites] environment passed: HOME=${HOME}, cache=${expected_cache}"
 
 lock_file="${runtime_root}/install.lock"

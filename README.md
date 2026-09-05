@@ -1,13 +1,13 @@
-# vinext-starter
+# Mizan UAE Compliance Intelligence
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+A full-stack demonstration of profile-driven UAE compliance planning, running
+on [vinext](https://github.com/cloudflare/vinext). Current regulatory data,
+dates, company profiles, fees, and rule-review labels are fictional samples.
 
 ## Prerequisites
 
 - Node.js `>=22.13.0`
-- Linux with `flock`, `curl`, and GNU `timeout`
+- npm 10 or later
 
 ## Sites Lifecycle
 
@@ -30,9 +30,9 @@ Scripts that need writable project-scoped home, npm, XDG, and temporary paths us
 - `examples/d1/` contains an optional D1 example surface
 - `drizzle.config.ts` supports local migration generation when needed
 
-## NVIDIA assistant integration
+## Assistant integration
 
-The production Worker exposes `POST /api/assistant` and keeps the NVIDIA API
+The production Worker exposes `POST /api/assistant` and keeps its upstream API
 key server-side. The request body must be JSON in the form
 `{"question":"..."}`. The default model is
 `meta/llama-3.3-70b-instruct`; set `NVIDIA_MODEL` to override it.
@@ -66,7 +66,8 @@ In **Render → service → Environment**, add `NVIDIA_API_KEY` as a secret
 environment variable. Set `CORS_ORIGIN` to the exact public origin allowed to
 call the API, and optionally override `NVIDIA_NIM_MODEL`. Render runs the server-side
 `app/api/assistant/route.ts`, so the browser never receives the key.
-Use `/api/health` as the service health endpoint.
+Use `/api/ready` as the service health endpoint. `/api/health` reports process
+liveness and deliberately stays healthy when assistant configuration is absent.
 
 To connect the GitHub Pages frontend to the Render backend, add this GitHub
 Actions repository variable under **Settings → Secrets and variables → Actions
@@ -144,7 +145,8 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 - `npm run dev`: start the Vite/Vinext development server
 - `npm run build`: build and validate the deployable Sites artifact
 - `npm run start`: start the built Vinext application
-- `npm test`: build, validate, and verify the rendered development-preview metadata
+- `npm run typecheck`: type-check application, Worker, and API code
+- `npm test`: build, then run assistant, health, runtime, rendering, and secret-leak regression tests
 - `npm run validate:artifact`: recheck an existing artifact's manifest and ESM `default.fetch` export
 - `npm run db:generate`: generate Drizzle migrations after schema changes
 
