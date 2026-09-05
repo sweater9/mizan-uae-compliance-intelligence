@@ -32,6 +32,13 @@ Scripts that need writable project-scoped home, npm, XDG, and temporary paths us
 
 ## NVIDIA assistant integration
 
+Live AI access follows the [public free-access policy](docs/public-access-policy.md):
+everyone can use it without signing in for one calendar month from launch.
+Set `PUBLIC_TRIAL_START_AT` once at launch on every active backend; keep it fixed
+across redeployments. Missing configuration disables live AI requests. The free
+month ends automatically without billing visitors. `GET /api/assistant` exposes
+the policy status and expiry date. Run `npm run test:policy` for the policy tests.
+
 The production Worker exposes `POST /api/assistant` and keeps the NVIDIA API
 key server-side. The request body must be JSON in the form
 `{"question":"..."}`. The default model is
