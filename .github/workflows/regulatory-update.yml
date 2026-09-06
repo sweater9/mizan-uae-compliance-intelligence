@@ -1,0 +1,34 @@
+name: Mizan Regulatory Update
+
+on:
+  schedule:
+    # UAE is UTC+4 year-round. 21:00 UTC = 01:00 Asia/Dubai on the following day.
+    - cron: "0 21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mizan-regulatory-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Validate update implementation
+        run: npm run typecheck
+      - name: Run regulatory update
+        if: ${{ hashFiles('scripts/regulatory-update.mjs') != '' }}
+        run: node scripts/regulatory-update.mjs
+        env:
+          MIZAN_INGESTION_API_KEY: ${{ secrets.MIZAN_INGESTION_API_KEY }}
+          MIZAN_DATABASE_URL: ${{ secrets.MIZAN_DATABASE_URL }}
