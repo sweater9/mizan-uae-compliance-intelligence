@@ -1,6 +1,6 @@
 {
-  "name": "uae-compliance-intelligence-demo",
-  "version": "0.1.0",
+  "name": "mizan-uae-compliance-intelligence",
+  "version": "1.0.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
