@@ -1,17 +1,16 @@
-import { regulatoryRecords } from "../../../lib/regulatory-records";
-import { searchRegulations } from "../../../lib/regulatory-search";
+import { getRegulatoryRepository } from "../../../lib/regulatory-repository";
 import type { RegulatoryStatus } from "../../../lib/regulatory-types";
 
-export function GET(request: Request) {
+export async function GET(request: Request) {
   const url = new URL(request.url);
   const query = (url.searchParams.get("q") ?? "").trim().slice(0, 500);
   const status = url.searchParams.get("status") as RegulatoryStatus | null;
-  const results = searchRegulations(regulatoryRecords, query, {
+  const results = (await getRegulatoryRepository().search(query, {
     jurisdiction: url.searchParams.get("jurisdiction") || undefined,
     authority: url.searchParams.get("authority") || undefined,
     topic: url.searchParams.get("topic") || undefined,
     status: status || undefined,
-  }).slice(0, 50);
+  })).slice(0, 50);
 
   return Response.json({
     query,
