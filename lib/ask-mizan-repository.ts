@@ -2,7 +2,8 @@ import { getRegulatoryRepository } from "./regulatory-repository";
 import type { AskMizanAnswer } from "./ask-mizan";
 
 export async function askMizanFromRepository(question: string): Promise<AskMizanAnswer> {
-  const matches = (await getRegulatoryRepository().search(question)).slice(0, 5);
+  const repository = await getRegulatoryRepository();
+  const matches = (await repository.search(question)).slice(0, 5);
   if (!matches.length) {
     return {
       answer: "Mizan does not currently have sufficient verified regulatory information in its database to answer this question. Please check the relevant official authority source.",
