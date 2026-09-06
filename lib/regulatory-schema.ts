@@ -1,16 +1,16 @@
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { boolean, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
-export const regulatorySources = sqliteTable("regulatory_sources", {
+export const regulatorySources = pgTable("regulatory_sources", {
   id: text("id").primaryKey(),
   authority: text("authority").notNull(),
   jurisdiction: text("jurisdiction").notNull(),
   canonicalUrl: text("canonical_url").notNull(),
-  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-  lastCheckedAt: text("last_checked_at"),
-  lastChangedAt: text("last_changed_at"),
+  enabled: boolean("enabled").notNull().default(true),
+  lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+  lastChangedAt: timestamp("last_changed_at", { withTimezone: true }),
 });
 
-export const regulatoryDocuments = sqliteTable("regulatory_documents", {
+export const regulatoryDocuments = pgTable("regulatory_documents", {
   id: text("id").primaryKey(),
   sourceId: text("source_id").notNull().references(() => regulatorySources.id),
   title: text("title").notNull(),
@@ -24,30 +24,30 @@ export const regulatoryDocuments = sqliteTable("regulatory_documents", {
   publicationDate: text("publication_date"),
   effectiveDate: text("effective_date"),
   summary: text("summary").notNull(),
-  topicsJson: text("topics_json").notNull().default("[]"),
-  aliasesJson: text("aliases_json").notNull().default("[]"),
-  applicabilityJson: text("applicability_json").notNull().default("[]"),
-  obligationsJson: text("obligations_json").notNull().default("[]"),
-  relatedRecordIdsJson: text("related_record_ids_json").notNull().default("[]"),
+  topics: jsonb("topics").$type<string[]>().notNull().default([]),
+  aliases: jsonb("aliases").$type<string[]>().notNull().default([]),
+  applicability: jsonb("applicability").$type<string[]>().notNull().default([]),
+  obligations: jsonb("obligations").$type<string[]>().notNull().default([]),
+  relatedRecordIds: jsonb("related_record_ids").$type<string[]>().notNull().default([]),
   evidenceStatus: text("evidence_status").notNull(),
-  languagesJson: text("languages_json").notNull().default("[]"),
-  lastVerifiedAt: text("last_verified_at").notNull(),
+  languages: jsonb("languages").$type<Array<"en" | "ar">>().notNull().default([]),
+  lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }).notNull(),
 });
 
-export const regulatoryVersions = sqliteTable("regulatory_versions", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const regulatoryVersions = pgTable("regulatory_versions", {
+  id: serial("id").primaryKey(),
   documentId: text("document_id").notNull().references(() => regulatoryDocuments.id),
   version: integer("version").notNull(),
   contentHash: text("content_hash").notNull(),
   rawContent: text("raw_content").notNull(),
-  fetchedAt: text("fetched_at").notNull(),
-  createdAt: text("created_at").notNull(),
-}, (table) => ({ documentVersion: uniqueIndex("regulatory_version_unique").on(table.documentId, table.version) }));
+  fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("regulatory_version_unique").on(table.documentId, table.version)]);
 
-export const regulatoryUpdateRuns = sqliteTable("regulatory_update_runs", {
+export const regulatoryUpdateRuns = pgTable("regulatory_update_runs", {
   id: text("id").primaryKey(),
-  startedAt: text("started_at").notNull(),
-  finishedAt: text("finished_at"),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
   status: text("status").notNull(),
   checkedSources: integer("checked_sources").notNull().default(0),
   changedSources: integer("changed_sources").notNull().default(0),
