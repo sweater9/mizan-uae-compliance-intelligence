@@ -1,5 +1,4 @@
-import { askMizan } from "../../../lib/ask-mizan";
-import { regulatoryRecords } from "../../../lib/regulatory-records";
+import { askMizanFromRepository } from "../../../lib/ask-mizan-repository";
 
 const MAX_BODY = 24_000;
 
@@ -26,9 +25,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Enter a question of 1–4,000 characters." }, { status: 400, headers: headers() });
   }
 
-  // Ask Mizan deliberately performs no external model/API request. Answers are
-  // assembled only from Mizan's verified regulatory knowledge base.
-  return Response.json(askMizan(regulatoryRecords, question), { headers: headers() });
+  return Response.json(await askMizanFromRepository(question), { headers: headers() });
 }
 
 export function OPTIONS() {
