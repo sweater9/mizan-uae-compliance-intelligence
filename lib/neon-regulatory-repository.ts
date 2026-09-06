@@ -1,16 +1,22 @@
 import "server-only";
 
+import { and, eq, isNotNull } from "drizzle-orm";
 import { getDatabase } from "./db";
 import { regulatoryDocuments } from "./regulatory-schema";
 import { searchRegulations } from "./regulatory-search";
 import type { RegulatoryRecord, RegulatorySearchFilters, RegulatorySearchResult } from "./regulatory-types";
 import type { RegulatoryRepository } from "./regulatory-repository";
 
-function iso(value: Date | null | undefined) {
-  return value ? value.toISOString() : undefined;
+function iso(value: Date | string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
-function toRecord(row: typeof regulatoryDocuments.$inferSelect): RegulatoryRecord {
+function toVerifiedRecord(row: typeof regulatoryDocuments.$inferSelect): RegulatoryRecord | null {
+  const lastVerifiedAt = iso(row.lastVerifiedAt);
+  if (row.evidenceStatus !== "official-verified" || !row.verifiedVersionId || !lastVerifiedAt) return null;
+
   return {
     id: row.id,
     title: row.title,
@@ -26,20 +32,31 @@ function toRecord(row: typeof regulatoryDocuments.$inferSelect): RegulatoryRecor
     status: row.status as RegulatoryRecord["status"],
     officialSourceUrl: row.officialSourceUrl,
     sourceAuthority: row.authority,
-    lastVerifiedAt: iso(row.lastVerifiedAt)!,
+    lastVerifiedAt,
     summary: row.summary,
     applicability: row.applicability,
     obligations: row.obligations,
     relatedRecordIds: row.relatedRecordIds,
-    evidenceStatus: row.evidenceStatus as RegulatoryRecord["evidenceStatus"],
+    evidenceStatus: "official-verified",
     languages: row.languages,
   };
 }
 
 export class NeonRegulatoryRepository implements RegulatoryRepository {
   async all(): Promise<RegulatoryRecord[]> {
-    const rows = await getDatabase().select().from(regulatoryDocuments);
-    return rows.map(toRecord);
+    const rows = await getDatabase()
+      .select()
+      .from(regulatoryDocuments)
+      .where(and(
+        eq(regulatoryDocuments.evidenceStatus, "official-verified"),
+        isNotNull(regulatoryDocuments.verifiedVersionId),
+        isNotNull(regulatoryDocuments.lastVerifiedAt),
+      ));
+
+    return rows.flatMap((row) => {
+      const record = toVerifiedRecord(row);
+      return record ? [record] : [];
+    });
   }
 
   async search(query: string, filters: RegulatorySearchFilters = {}): Promise<RegulatorySearchResult[]> {
