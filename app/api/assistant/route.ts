@@ -1,49 +1,35 @@
 import { askMizanFromRepository } from "../../../lib/ask-mizan-repository";
+import { apiHeaders, enterRequest, preflight, readJsonBody, RequestBodyTooLargeError } from "../../../lib/api-security";
 import { RegulatoryDatabaseUnavailableError } from "../../../lib/regulatory-repository";
 
 const MAX_BODY = 24_000;
 
-function headers() {
-  return { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
-}
-
 export async function POST(request: Request) {
+  const { allowed, headers } = apiHeaders(request);
+  if (!allowed) return Response.json({ error: "This origin is not allowed to access Mizan." }, { status: 403, headers });
   if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
-    return Response.json({ error: "Send a JSON request." }, { status: 415, headers: headers() });
-  }
-  if (Number(request.headers.get("content-length")) > MAX_BODY) {
-    return Response.json({ error: "The request is too large." }, { status: 413, headers: headers() });
+    return Response.json({ error: "Send a JSON request." }, { status: 415, headers });
   }
 
   let payload: unknown;
-  try { payload = await request.json(); }
-  catch { return Response.json({ error: "Send a valid JSON question." }, { status: 400, headers: headers() }); }
+  try { payload = await readJsonBody(request, MAX_BODY); }
+  catch (error) { return Response.json({ error: error instanceof RequestBodyTooLargeError ? "The request is too large." : "Send a valid JSON question." }, { status: error instanceof RequestBodyTooLargeError ? 413 : 400, headers }); }
 
   const question = typeof (payload as { question?: unknown })?.question === "string"
     ? (payload as { question: string }).question.trim()
     : "";
   if (!question || question.length > 4000) {
-    return Response.json({ error: "Enter a question of 1–4,000 characters." }, { status: 400, headers: headers() });
+    return Response.json({ error: "Enter a question of 1–4,000 characters." }, { status: 400, headers });
   }
 
+  const guard = enterRequest(request, "assistant", 30, 8);
+  if (!guard.allowed) { headers.set("Retry-After", String(guard.retryAfter)); return Response.json({ error: "Mizan is busy. Please try again shortly." }, { status: 429, headers }); }
   try {
-    return Response.json(await askMizanFromRepository(question), { headers: headers() });
+    return Response.json(await askMizanFromRepository(question), { headers });
   } catch (error) {
-    if (error instanceof RegulatoryDatabaseUnavailableError) {
-      return Response.json({ error: "Regulatory database unavailable." }, { status: 503, headers: headers() });
-    }
-    console.error("Ask Mizan failed", error);
-    return Response.json({ error: "Ask Mizan is temporarily unavailable." }, { status: 503, headers: headers() });
-  }
+    if (!(error instanceof RegulatoryDatabaseUnavailableError)) console.error("Ask Mizan request failed");
+    return Response.json({ error: "Mizan's verified regulatory database is temporarily unavailable." }, { status: 503, headers });
+  } finally { guard.release(); }
 }
 
-export function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
-}
+export function OPTIONS(request: Request) { return preflight(request, "POST, OPTIONS"); }
