@@ -1,4 +1,5 @@
 import { askMizanFromRepository } from "../../../lib/ask-mizan-repository";
+import { RegulatoryDatabaseUnavailableError } from "../../../lib/regulatory-repository";
 
 const MAX_BODY = 24_000;
 
@@ -25,7 +26,15 @@ export async function POST(request: Request) {
     return Response.json({ error: "Enter a question of 1–4,000 characters." }, { status: 400, headers: headers() });
   }
 
-  return Response.json(await askMizanFromRepository(question), { headers: headers() });
+  try {
+    return Response.json(await askMizanFromRepository(question), { headers: headers() });
+  } catch (error) {
+    if (error instanceof RegulatoryDatabaseUnavailableError) {
+      return Response.json({ error: "Regulatory database unavailable." }, { status: 503, headers: headers() });
+    }
+    console.error("Ask Mizan failed", error);
+    return Response.json({ error: "Ask Mizan is temporarily unavailable." }, { status: 503, headers: headers() });
+  }
 }
 
 export function OPTIONS() {
