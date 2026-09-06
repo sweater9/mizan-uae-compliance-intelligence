@@ -1,22 +1,28 @@
+import { apiHeaders, enterRequest, preflight } from "../../../lib/api-security";
 import { getRegulatoryRepository, RegulatoryDatabaseUnavailableError } from "../../../lib/regulatory-repository";
 import type { RegulatoryStatus } from "../../../lib/regulatory-types";
 
 export async function GET(request: Request) {
+  const { allowed, headers } = apiHeaders(request);
+  if (!allowed) return Response.json({ error: "This origin is not allowed to access Mizan." }, { status: 403, headers });
+  const guard = enterRequest(request, "regulatory-search", 120, 16);
+  if (!guard.allowed) { headers.set("Retry-After", String(guard.retryAfter)); return Response.json({ error: "Mizan is busy. Please try again shortly." }, { status: 429, headers }); }
   try {
     const url = new URL(request.url);
-    const query = (url.searchParams.get("q") ?? "").trim().slice(0, 500);
+    const rawQuery = (url.searchParams.get("q") ?? "").trim();
+    if (!rawQuery || rawQuery.length > 500) return Response.json({ error: "Enter a search query of 1–500 characters." }, { status: 400, headers });
     const status = url.searchParams.get("status") as RegulatoryStatus | null;
     const repository = await getRegulatoryRepository();
-    const results = (await repository.search(query, {
+    const results = (await repository.search(rawQuery, {
       jurisdiction: url.searchParams.get("jurisdiction") || undefined,
       authority: url.searchParams.get("authority") || undefined,
       topic: url.searchParams.get("topic") || undefined,
       status: status || undefined,
       evidenceStatus: "official-verified",
-    })).slice(0, 50);
+    })).filter(({ record }) => record.evidenceStatus === "official-verified").slice(0, 50);
 
     return Response.json({
-      query,
+      query: rawQuery,
       count: results.length,
       results: results.map(({ record, matchedTerms }) => ({
         id: record.id,
@@ -37,12 +43,11 @@ export async function GET(request: Request) {
         evidenceStatus: record.evidenceStatus,
         matchedTerms,
       })),
-    }, { headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300", "X-Content-Type-Options": "nosniff" } });
+    }, { headers });
   } catch (error) {
-    if (error instanceof RegulatoryDatabaseUnavailableError) {
-      return Response.json({ error: "Regulatory database unavailable." }, { status: 503, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
-    }
-    console.error("Regulatory search failed", error);
-    return Response.json({ error: "Regulatory search temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
-  }
+    if (!(error instanceof RegulatoryDatabaseUnavailableError)) console.error("Regulatory search failed");
+    return Response.json({ error: "Regulatory search temporarily unavailable." }, { status: 503, headers });
+  } finally { guard.release(); }
 }
+
+export function OPTIONS(request: Request) { return preflight(request, "GET, OPTIONS"); }
