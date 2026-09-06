@@ -16,6 +16,13 @@ export interface RegulatoryUpdateProcessor {
   process(snapshot: SourceSnapshot): Promise<void>;
 }
 
+export interface RegulatorySourceFetchResult {
+  content: string;
+  finalUrl?: string;
+}
+
+export type RegulatorySourceFetcher = (source: RegulatoryUpdateSource) => Promise<RegulatorySourceFetchResult>;
+
 export interface RegulatoryUpdateResult {
   checkedSources: number;
   changedSources: number;
@@ -23,27 +30,33 @@ export interface RegulatoryUpdateResult {
   failures: Array<{ sourceId: string; error: string }>;
 }
 
+async function defaultFetcher(source: RegulatoryUpdateSource): Promise<RegulatorySourceFetchResult> {
+  const response = await fetch(source.canonicalUrl, {
+    headers: { "User-Agent": "Mizan-Regulatory-Update/1.0", Accept: "text/html,application/xhtml+xml,application/json,text/plain" },
+    redirect: "error",
+  });
+  if (!response.ok) throw new Error(`official source returned HTTP ${response.status}`);
+  const content = await response.text();
+  if (!content.trim()) throw new Error("official source returned empty content");
+  return { content, finalUrl: response.url };
+}
+
 export async function runRegulatoryUpdate(
   sources: RegulatoryUpdateSource[],
   store: RegulatoryUpdateStore,
   processor: RegulatoryUpdateProcessor,
-  fetcher: typeof fetch = fetch,
+  fetcher: RegulatorySourceFetcher = defaultFetcher,
 ): Promise<RegulatoryUpdateResult> {
   const result: RegulatoryUpdateResult = { checkedSources: 0, changedSources: 0, processedSources: 0, failures: [] };
 
   for (const source of sources.filter((item) => item.enabled)) {
     const fetchedAt = new Date().toISOString();
     try {
-      const response = await fetcher(source.canonicalUrl, {
-        headers: { "User-Agent": "Mizan-Regulatory-Update/1.0", Accept: "text/html,application/xhtml+xml,application/json,text/plain" },
-        redirect: "follow",
-      });
-      if (!response.ok) throw new Error(`official source returned HTTP ${response.status}`);
-      const content = await response.text();
-      if (!content.trim()) throw new Error("official source returned empty content");
+      const fetched = await fetcher(source);
+      if (!fetched.content.trim()) throw new Error("official source returned empty content");
 
       result.checkedSources++;
-      const snapshot: SourceSnapshot = { sourceId: source.id, canonicalUrl: source.canonicalUrl, fetchedAt, content };
+      const snapshot: SourceSnapshot = { sourceId: source.id, canonicalUrl: source.canonicalUrl, fetchedAt, content: fetched.content };
       const previous = await store.latestSnapshot(source.id);
       const decision = decideIngestion(snapshot, previous);
       await store.markChecked(source.id, fetchedAt, decision.changed);
