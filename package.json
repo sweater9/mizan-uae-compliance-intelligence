@@ -2,7 +2,9 @@
   "name": "uae-compliance-intelligence-demo",
   "version": "0.1.0",
   "private": true,
-  "engines": {"node": ">=22.13.0"},
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "install:ci": "bash scripts/install-ci.sh",
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vite",
@@ -14,6 +16,7 @@
     "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate",
     "db:migrate": "bash scripts/sites-env.sh -- drizzle-kit migrate",
+    "db:check": "bash scripts/sites-env.sh -- tsx scripts/check-database-readiness.mjs",
     "db:push": "bash scripts/sites-env.sh -- drizzle-kit push",
     "typecheck": "tsc --noEmit"
   },
