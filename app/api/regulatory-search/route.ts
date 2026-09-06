@@ -5,7 +5,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const query = (url.searchParams.get("q") ?? "").trim().slice(0, 500);
   const status = url.searchParams.get("status") as RegulatoryStatus | null;
-  const results = (await getRegulatoryRepository().search(query, {
+  const repository = await getRegulatoryRepository();
+  const results = (await repository.search(query, {
     jurisdiction: url.searchParams.get("jurisdiction") || undefined,
     authority: url.searchParams.get("authority") || undefined,
     topic: url.searchParams.get("topic") || undefined,
