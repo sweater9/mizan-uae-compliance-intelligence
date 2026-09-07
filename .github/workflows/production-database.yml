@@ -2,6 +2,9 @@ name: Production Database Gate
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - production-db-gate-once
 
 permissions:
   contents: read
