@@ -38,3 +38,4 @@ jobs:
         run: npm run db:check
         env:
           MIZAN_DATABASE_URL: ${{ secrets.MIZAN_DATABASE_URL }}
+      # One-shot production corpus gate; remove after successful verification.
