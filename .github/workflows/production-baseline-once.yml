@@ -1,0 +1,33 @@
+name: Production Baseline Once
+on:
+  push:
+    branches: [production-baseline-once]
+permissions:
+  contents: read
+concurrency:
+  group: mizan-production-baseline
+  cancel-in-progress: false
+jobs:
+  seed-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Seed verified official baseline
+        run: node scripts/seed-regulatory-baseline.mjs
+        env:
+          MIZAN_DATABASE_URL: ${{ secrets.MIZAN_DATABASE_URL }}
+      - name: Verify database readiness
+        run: node scripts/check-database-readiness.mjs
+        env:
+          MIZAN_DATABASE_URL: ${{ secrets.MIZAN_DATABASE_URL }}
+      - name: Run production regulatory updater
+        run: node scripts/regulatory-update.mjs
+        env:
+          MIZAN_DATABASE_URL: ${{ secrets.MIZAN_DATABASE_URL }}
