@@ -9,6 +9,22 @@ const reviewer = "mizan-production-baseline-2026-09-07";
 
 const records = [
   {
+    id: "uae-federal-aml-law-10-2025",
+    sourceId: "uae-legislation-aml-law-10-2025",
+    authority: "UAE Federal Government",
+    jurisdiction: "UAE Mainland",
+    url: "https://uaelegislation.gov.ae/en/legislations/3314/download",
+    title: "Federal Decree by Law No. (10) of 2025 Regarding Anti-Money Laundering and Combating the Financing of Terrorism and Proliferation Financing",
+    instrumentType: "Federal Decree-Law",
+    status: "in-force",
+    effectiveDate: null,
+    summary: "Federal AML legislation establishing the UAE legal framework for anti-money laundering and combating terrorist and proliferation financing, including the scope of financial institutions, DNFBPs, virtual asset service providers and non-profit organisations.",
+    topics: ["AML", "CFT", "proliferation financing", "financial institutions", "DNFBP", "VASP", "NPO"],
+    applicability: ["Financial institutions", "Designated Non-Financial Businesses and Professions", "Virtual Asset Service Providers", "Non-Profit Organizations"],
+    obligations: ["Determine whether the entity and its activities fall within the categories and obligations established by the Federal AML legal framework.", "Apply the applicable AML, terrorist-financing and proliferation-financing requirements under the Federal Decree-Law and its implementing framework."],
+    excerpt: "Official UAE Legislation text identifies Federal Decree by Law No. (10) of 2025 as the federal law regarding AML and combating terrorist and proliferation financing and defines covered financial activities and entities.",
+  },
+  {
     id: "cbuae-aml-guidelines-purpose-scope",
     sourceId: "cbuae-aml-guidelines",
     authority: "Central Bank of the UAE",
@@ -40,17 +56,33 @@ const records = [
     obligations: ["Assess the extent to which the DFSA AML Rules apply on a continuing basis.", "Adopt an AML/CTF/CPF approach proportionate to identified risks as required by AML Rule 4.1.1."],
     excerpt: "Official DFSA page identifies the AML Module as the consolidated AML/CTF/sanctions requirements for Relevant Persons and describes the risk-based approach under AML Rule 4.1.1.",
   },
+  {
+    id: "adgm-fsra-aml-framework-2026",
+    sourceId: "adgm-fsra-aml-framework",
+    authority: "ADGM Financial Services Regulatory Authority",
+    jurisdiction: "ADGM",
+    url: "https://www.adgm.com/media/announcements/adgm-fsra-finalises-enhancements-to-its-anti-money-laundering-framework",
+    title: "ADGM FSRA Anti-Money Laundering Framework — 2026 Enhancements",
+    instrumentType: "Regulatory framework",
+    status: "in-force",
+    effectiveDate: "2026-05-21",
+    summary: "FSRA framework for AML, counter-terrorist financing, counter-proliferation financing and sanctions compliance, updated in 2026 through amendments to the Financial Services and Markets Regulations 2015 and the Anti-Money Laundering and Sanctions Rulebook.",
+    topics: ["AML", "CFT", "proliferation financing", "sanctions", "ADGM", "FSRA"],
+    applicability: ["ADGM Authorised Persons", "Recognised Bodies", "Designated Non-Financial Businesses or Professions", "Non-Profit Organisations, as applicable under the AML framework"],
+    obligations: ["Maintain compliance with the applicable FSRA AML, counter-terrorist-financing, counter-proliferation-financing and sanctions framework.", "Assess and apply the current AML Rulebook and relevant federal AML legislation to the Relevant Person's activities."],
+    excerpt: "Official ADGM FSRA announcement confirms finalised 2026 enhancements to the AML/CTF/CPF and sanctions framework, including revisions to FSMR and the AML Rulebook.",
+  },
 ];
 
 for (const r of records) {
   await sql`insert into regulatory_sources (id, authority, jurisdiction, canonical_url, enabled, last_checked_at) values (${r.sourceId}, ${r.authority}, ${r.jurisdiction}, ${r.url}, true, now()) on conflict (id) do update set authority=excluded.authority, jurisdiction=excluded.jurisdiction, canonical_url=excluded.canonical_url, enabled=true`;
-  await sql`insert into regulatory_documents (id, source_id, title, instrument_type, authority, jurisdiction, status, official_source_url, effective_date, summary, topics, aliases, applicability, obligations, related_record_ids, evidence_status, languages) values (${r.id}, ${r.sourceId}, ${r.title}, ${r.instrumentType}, ${r.authority}, ${r.jurisdiction}, ${r.status}::regulatory_status, ${r.url}, ${r.effectiveDate}, ${r.summary}, ${JSON.stringify(r.topics)}::jsonb, '[]'::jsonb, ${JSON.stringify(r.applicability)}::jsonb, ${JSON.stringify(r.obligations)}::jsonb, '[]'::jsonb, 'official-source-pending-review', '["en"]'::jsonb) on conflict (id) do nothing`;
+  await sql`insert into regulatory_documents (id, source_id, title, instrument_type, authority, jurisdiction, status, official_source_url, effective_date, summary, topics, aliases, applicability, obligations, related_record_ids, evidence_status, languages) values (${r.id}, ${r.sourceId}, ${r.title}, ${r.instrumentType}, ${r.authority}, ${r.jurisdiction}, ${r.status}::regulatory_status, ${r.url}, ${r.effectiveDate}, ${r.summary}, ${JSON.stringify(r.topics)}::jsonb, '[]'::jsonb, ${JSON.stringify(r.applicability)}::jsonb, ${JSON.stringify(r.obligations)}::jsonb, '[]'::jsonb, 'official-source-pending-review', '["en"]'::jsonb) on conflict (id) do update set source_id=excluded.source_id, title=excluded.title, instrument_type=excluded.instrument_type, authority=excluded.authority, jurisdiction=excluded.jurisdiction, status=excluded.status, official_source_url=excluded.official_source_url, effective_date=excluded.effective_date, summary=excluded.summary, topics=excluded.topics, applicability=excluded.applicability, obligations=excluded.obligations`;
   const raw = JSON.stringify({ title:r.title, summary:r.summary, obligations:r.obligations, officialSource:r.url });
   const hash = crypto.createHash("sha256").update(raw).digest("hex");
   let versions = await sql`select id from regulatory_versions where document_id=${r.id} and content_hash=${hash} limit 1`;
-  if (!versions.length) versions = await sql`insert into regulatory_versions (document_id, version, content_hash, raw_content, fetched_at, review_status, reviewed_at, reviewed_by, review_note) values (${r.id}, 1, ${hash}, ${raw}, ${verifiedAt}, 'verified', ${verifiedAt}, ${reviewer}, 'Baseline manually checked against the cited official regulator page on 2026-09-07.') returning id`;
+  if (!versions.length) versions = await sql`insert into regulatory_versions (document_id, version, content_hash, raw_content, fetched_at, review_status, reviewed_at, reviewed_by, review_note) values (${r.id}, coalesce((select max(version)+1 from regulatory_versions where document_id=${r.id}),1), ${hash}, ${raw}, ${verifiedAt}, 'verified', ${verifiedAt}, ${reviewer}, 'Baseline checked against the cited official government or regulator source on 2026-09-07.') returning id`;
   const versionId = Number(versions[0].id);
-  await sql`insert into regulatory_evidence (document_id, version_id, source_id, type, url, excerpt, captured_at, review_status, reviewed_at, reviewed_by, review_note) values (${r.id}, ${versionId}, ${r.sourceId}, 'official-source', ${r.url}, ${r.excerpt}, ${verifiedAt}, 'verified', ${verifiedAt}, ${reviewer}, 'Official regulator source manually checked on 2026-09-07.') on conflict (version_id, url) do update set review_status='verified', reviewed_at=${verifiedAt}, reviewed_by=${reviewer}, review_note='Official regulator source manually checked on 2026-09-07.'`;
+  await sql`insert into regulatory_evidence (document_id, version_id, source_id, type, url, excerpt, captured_at, review_status, reviewed_at, reviewed_by, review_note) values (${r.id}, ${versionId}, ${r.sourceId}, 'official-source', ${r.url}, ${r.excerpt}, ${verifiedAt}, 'verified', ${verifiedAt}, ${reviewer}, 'Official government or regulator source checked on 2026-09-07.') on conflict (version_id, url) do update set review_status='verified', reviewed_at=${verifiedAt}, reviewed_by=${reviewer}, review_note='Official government or regulator source checked on 2026-09-07.'`;
   await sql`update regulatory_documents set verified_version_id=${versionId}, evidence_status='official-verified', last_verified_at=${verifiedAt} where id=${r.id}`;
 }
 console.log(`Verified regulatory baseline ready: ${records.length} records.`);
