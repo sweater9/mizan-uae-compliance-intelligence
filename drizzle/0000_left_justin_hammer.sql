@@ -94,6 +94,8 @@ CREATE TABLE "regulatory_versions" (
 	CONSTRAINT "regulatory_versions_review_complete" CHECK (("regulatory_versions"."review_status" = 'pending' and "regulatory_versions"."reviewed_at" is null and "regulatory_versions"."reviewed_by" is null) or ("regulatory_versions"."review_status" in ('verified', 'rejected') and "regulatory_versions"."reviewed_at" is not null and nullif(btrim("regulatory_versions"."reviewed_by"), '') is not null))
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX "regulatory_documents_id_source_unique" ON "regulatory_documents" USING btree ("id","source_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "regulatory_versions_id_document_unique" ON "regulatory_versions" USING btree ("id","document_id");--> statement-breakpoint
 ALTER TABLE "regulatory_documents" ADD CONSTRAINT "regulatory_documents_source_id_regulatory_sources_id_fk" FOREIGN KEY ("source_id") REFERENCES "public"."regulatory_sources"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "regulatory_documents" ADD CONSTRAINT "regulatory_documents_verified_version_id_regulatory_versions_id_fk" FOREIGN KEY ("verified_version_id") REFERENCES "public"."regulatory_versions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "regulatory_evidence" ADD CONSTRAINT "regulatory_evidence_document_id_regulatory_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."regulatory_documents"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
@@ -103,15 +105,13 @@ ALTER TABLE "regulatory_evidence" ADD CONSTRAINT "regulatory_evidence_document_s
 ALTER TABLE "regulatory_versions" ADD CONSTRAINT "regulatory_versions_document_id_regulatory_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."regulatory_documents"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 CREATE INDEX "regulatory_documents_source_idx" ON "regulatory_documents" USING btree ("source_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "regulatory_documents_source_instrument_unique" ON "regulatory_documents" USING btree ("source_id","instrument_type","instrument_number");--> statement-breakpoint
-CREATE UNIQUE INDEX "regulatory_documents_id_source_unique" ON "regulatory_documents" USING btree ("id","source_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "regulatory_evidence_version_url_unique" ON "regulatory_evidence" USING btree ("version_id","url");--> statement-breakpoint
 CREATE INDEX "regulatory_evidence_document_idx" ON "regulatory_evidence" USING btree ("document_id");--> statement-breakpoint
 CREATE INDEX "regulatory_evidence_source_idx" ON "regulatory_evidence" USING btree ("source_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "regulatory_sources_canonical_url_unique" ON "regulatory_sources" USING btree ("canonical_url");--> statement-breakpoint
 CREATE INDEX "regulatory_update_runs_started_at_idx" ON "regulatory_update_runs" USING btree ("started_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "regulatory_versions_document_version_unique" ON "regulatory_versions" USING btree ("document_id","version");--> statement-breakpoint
-CREATE UNIQUE INDEX "regulatory_versions_document_hash_unique" ON "regulatory_versions" USING btree ("document_id","content_hash");--> statement-breakpoint
-CREATE UNIQUE INDEX "regulatory_versions_id_document_unique" ON "regulatory_versions" USING btree ("id","document_id");
+CREATE UNIQUE INDEX "regulatory_versions_document_hash_unique" ON "regulatory_versions" USING btree ("document_id","content_hash");
 --> statement-breakpoint
 CREATE FUNCTION enforce_verified_regulatory_documents() RETURNS trigger
 LANGUAGE plpgsql
