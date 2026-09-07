@@ -20,6 +20,10 @@ jobs:
       - run: npm test
         env:
           NVIDIA_API_KEY: qa-build-secret-sentinel
+      - name: Verify PostgreSQL migration artifacts are current
+        run: |
+          npm run db:generate
+          git diff --exit-code -- drizzle
       - run: npm run build:pages
         env:
           VITE_API_BASE_URL: https://example.invalid

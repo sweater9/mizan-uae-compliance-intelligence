@@ -5,17 +5,13 @@ services:
     plan: free
     branch: main
     autoDeploy: true
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci && npm run db:migrate && npm run db:check && npm run build
     startCommand: npm run start
     healthCheckPath: /api/ready
     envVars:
       - key: NODE_VERSION
         value: 22.13.0
-      - key: CORS_ORIGIN
+      - key: MIZAN_DATABASE_URL
         sync: false
-      - key: NVIDIA_NIM_BASE_URL
-        value: https://integrate.api.nvidia.com/v1
-      - key: NVIDIA_NIM_MODEL
-        value: nvidia/nemotron-3.5-lightning-30b-a3b
-      - key: NVIDIA_API_KEY
+      - key: CORS_ORIGIN
         sync: false

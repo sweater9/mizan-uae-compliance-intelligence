@@ -1,0 +1,41 @@
+name: Production Database Gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mizan-production-database
+  cancel-in-progress: false
+
+jobs:
+  migrate-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Require production database secret
+        shell: bash
+        env:
+          MIZAN_DATABASE_URL: ${{ secrets.MIZAN_DATABASE_URL }}
+        run: |
+          if [ -z "$MIZAN_DATABASE_URL" ]; then
+            echo "MIZAN_DATABASE_URL is not configured for the production environment." >&2
+            exit 1
+          fi
+      - name: Apply PostgreSQL migrations
+        run: npm run db:migrate
+        env:
+          MIZAN_DATABASE_URL: ${{ secrets.MIZAN_DATABASE_URL }}
+      - name: Verify production database readiness
+        run: npm run db:check
+        env:
+          MIZAN_DATABASE_URL: ${{ secrets.MIZAN_DATABASE_URL }}
