@@ -1,0 +1,107 @@
+{
+  "generatedAt": "2026-09-07",
+  "purpose": "Authoritative source inventory for Mizan production regulatory corpus expansion. Inventory entries are not automatically treated as verified regulatory evidence.",
+  "sources": [
+    {
+      "id": "cbuae-aml-guidelines",
+      "authority": "Central Bank of the UAE",
+      "jurisdiction": "UAE Mainland",
+      "category": "AML/CFT guidance",
+      "canonicalUrl": "https://rulebook.centralbank.ae/en/rulebook/11-purpose-and-scope",
+      "priority": "launch-critical",
+      "ingestion": "enabled",
+      "verification": "baseline-verified",
+      "notes": "Current production baseline source. Automated GitHub fetch has returned HTTP 403; retain official URL and do not substitute third-party mirrors."
+    },
+    {
+      "id": "dfsa-aml-framework",
+      "authority": "Dubai Financial Services Authority",
+      "jurisdiction": "DIFC",
+      "category": "AML/CTF/sanctions framework",
+      "canonicalUrl": "https://www.dfsa.ae/what-we-do/aml-ctf-sanctions-compliance/regulatory-framework",
+      "priority": "launch-critical",
+      "ingestion": "enabled",
+      "verification": "baseline-verified"
+    },
+    {
+      "id": "dfsa-aml-amendments-2026-435-436",
+      "authority": "Dubai Financial Services Authority",
+      "jurisdiction": "DIFC",
+      "category": "Rulebook amendments",
+      "canonicalUrl": "https://www.dfsa.ae/news/notice-amendments-legislation-february-2026",
+      "priority": "launch-critical",
+      "ingestion": "candidate",
+      "verification": "official-source-confirmed",
+      "effectiveDate": "2026-03-02",
+      "notes": "AML Instrument No. 435 and GLO Instrument No. 436 align the DFSA framework with 2025 UAE Federal AML legislation."
+    },
+    {
+      "id": "dfsa-aml-amendments-2026-432",
+      "authority": "Dubai Financial Services Authority",
+      "jurisdiction": "DIFC",
+      "category": "Rulebook amendments",
+      "canonicalUrl": "https://www.dfsa.ae/news/notice-amendments-legislation-march-2026",
+      "priority": "launch-critical",
+      "ingestion": "candidate",
+      "verification": "official-source-confirmed",
+      "effectiveDate": "2026-04-01",
+      "notes": "AML Rule-making Instrument No. 432 of 2026."
+    },
+    {
+      "id": "dfsa-aml-faq-2026",
+      "authority": "Dubai Financial Services Authority",
+      "jurisdiction": "DIFC",
+      "category": "AML supervisory FAQ",
+      "canonicalUrl": "https://www.dfsa.ae/application/files/8317/7244/5636/AML_FAQ_-_MAR_2026_1.pdf",
+      "priority": "high",
+      "ingestion": "candidate",
+      "verification": "official-source-confirmed",
+      "notes": "Supporting material on governance, risk assessment, customer acceptance, digital onboarding, outsourcing and internal audit; should be distinguished from binding Rules."
+    },
+    {
+      "id": "adgm-fsra-aml-rulebook",
+      "authority": "ADGM Financial Services Regulatory Authority",
+      "jurisdiction": "ADGM",
+      "category": "AML and sanctions rules and guidance",
+      "canonicalUrl": "https://www.adgm.com/media/announcements/adgm-fsra-announces-revisions-to-its-aml-and-sanctions-rules-and-guidance",
+      "priority": "launch-critical",
+      "ingestion": "candidate",
+      "verification": "official-source-confirmed",
+      "notes": "Official ADGM source confirms AML Rulebook applies to firms subject to its provisions, including authorised financial firms and DNFBPs. Exact current rulebook instrument URL must be captured as a separate source before rule-level verification."
+    },
+    {
+      "id": "adgm-fsra-mlro-guidance-2026",
+      "authority": "ADGM Financial Services Regulatory Authority",
+      "jurisdiction": "ADGM",
+      "category": "AML/CFT/CPF supervisory notice",
+      "canonicalUrl": "https://assets.adgm.com/download/assets/FCCP-Notice%2BNo.%2B69%2Bof%2B2026%2B-%2BSSC%2BJoint%2BAMLCFTCPF%2BGuidance%2Bon%2Bthe%2BCO%2B%2BMLRO%2BFunction%2Bin%2Bthe%2BUAE.pdf/f34ead323fb011f1b0134e1df5008577",
+      "priority": "high",
+      "ingestion": "candidate",
+      "verification": "official-source-confirmed",
+      "issuedDate": "2026-04-24",
+      "notes": "Notice FSRA/FCCP/69/2026 covers governance, appointment, resourcing, independence and responsibilities of CO/MLRO functions; AML Rulebook prevails if conflict exists."
+    },
+    {
+      "id": "adgm-fsra-cyber-risk-2025",
+      "authority": "ADGM Financial Services Regulatory Authority",
+      "jurisdiction": "ADGM",
+      "category": "Cyber risk management",
+      "canonicalUrl": "https://www.adgm.com/media/announcements/adgms-fsra-issues-cyber-risk-management-framework",
+      "priority": "high",
+      "ingestion": "candidate",
+      "verification": "official-source-confirmed",
+      "effectiveDate": "2026-01-31"
+    },
+    {
+      "id": "cma-uae-legislation-index",
+      "authority": "Capital Markets Authority UAE",
+      "jurisdiction": "UAE Mainland",
+      "category": "Capital markets legislation index",
+      "canonicalUrl": "https://beta.sca.gov.ae/",
+      "priority": "launch-critical",
+      "ingestion": "discovery",
+      "verification": "official-domain-confirmed",
+      "notes": "Official authority site exposes legislation, circulars/controls/procedures, AML/CFT and recent-legislation sections. Individual binding instruments must be captured and verified before becoming searchable evidence."
+    }
+  ]
+}
