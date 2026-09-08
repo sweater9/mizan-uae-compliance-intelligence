@@ -45,7 +45,13 @@ export async function GET(request: Request) {
       })),
     }, { headers });
   } catch (error) {
-    if (!(error instanceof RegulatoryDatabaseUnavailableError)) console.error("Regulatory search failed");
+    if (error instanceof RegulatoryDatabaseUnavailableError) {
+      console.error("Regulatory search database unavailable", { name: error.name, message: error.message });
+    } else if (error instanceof Error) {
+      console.error("Regulatory search failed", { name: error.name, message: error.message, stack: error.stack });
+    } else {
+      console.error("Regulatory search failed", { error: String(error) });
+    }
     return Response.json({ error: "Regulatory search temporarily unavailable." }, { status: 503, headers });
   } finally { guard.release(); }
 }
