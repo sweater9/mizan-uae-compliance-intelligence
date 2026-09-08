@@ -14,12 +14,22 @@ const base = {
   freeZoneStatus: "mainland",
 };
 
-const record = (overrides = {}) => ({
-  id: "vat-1", title: "VAT obligations", jurisdiction: "federal",
-  authorities: ["Federal Tax Authority"], appliesTo: [{ attribute: "vatStatus", values: ["registered"] }],
-  sourceUrl: "https://example.test/official", evidenceStatus: "official-verified", reviewStatus: "verified",
-  summary: "Official record", ...overrides,
-});
+const record = (overrides = {}) => {
+  const baseRecord = {
+    id: "vat-1", title: "VAT obligations", jurisdiction: "federal",
+    authorities: ["Federal Tax Authority"], appliesTo: [{ attribute: "vatStatus", values: ["registered"] }],
+    sourceUrl: "https://example.test/official", evidenceStatus: "official-verified", reviewStatus: "verified",
+    verifiedVersionId: 1, versionId: 1, versionReviewStatus: "verified",
+    evidenceVersionId: 1, evidenceReviewStatus: "verified",
+    lastVerifiedAt: new Date("2026-01-01T00:00:00.000Z"),
+    summary: "Official record", ...overrides,
+  };
+  return {
+    ...baseRecord,
+    versionDocumentId: baseRecord.versionDocumentId ?? baseRecord.id,
+    evidenceDocumentId: baseRecord.evidenceDocumentId ?? baseRecord.id,
+  };
+};
 
 test("verified federal evidence produces a definitive applies result", () => {
   assert.equal(evaluateApplicability(base, [record()])[0].state, "applies");
@@ -29,6 +39,39 @@ test("pending evidence never produces a definitive applies result", () => {
   const result = evaluateApplicability(base, [record({ evidenceStatus: "official-source-pending-review", reviewStatus: "pending" })])[0];
   assert.equal(result.state, "likely-applies");
   assert.equal(result.evidenceStatus, "official-source-pending-review");
+});
+
+test("official-verified without a verified version cannot produce definitive applies", () => {
+  const result = evaluateApplicability(base, [record({ verifiedVersionId: undefined })])[0];
+  assert.equal(result.state, "likely-applies");
+});
+
+test("inconsistent version or evidence chains cannot produce definitive applies", () => {
+  for (const overrides of [
+    { versionId: 2 },
+    { versionDocumentId: "other-document" },
+    { evidenceVersionId: 2 },
+    { evidenceDocumentId: "other-document" },
+    { versionReviewStatus: "rejected" },
+    { evidenceReviewStatus: "rejected" },
+  ]) {
+    assert.equal(evaluateApplicability(base, [record(overrides)])[0].state, "likely-applies");
+  }
+});
+
+test("rejected evidence cannot produce definitive applies", () => {
+  const result = evaluateApplicability(base, [record({ evidenceReviewStatus: "rejected" })])[0];
+  assert.equal(result.state, "likely-applies");
+});
+
+test("invalid verification timestamps cannot produce definitive applies", () => {
+  const result = evaluateApplicability(base, [record({ lastVerifiedAt: new Date("invalid") })])[0];
+  assert.equal(result.state, "likely-applies");
+});
+
+test("jurisdiction mismatch remains non-applicable despite verified evidence", () => {
+  const result = evaluateApplicability(base, [record({ jurisdiction: "difc" })])[0];
+  assert.equal(result.state, "does-not-apply");
 });
 
 test("DIFC and ADGM records do not apply to mainland profiles", () => {

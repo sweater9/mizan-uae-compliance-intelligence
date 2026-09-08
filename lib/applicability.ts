@@ -33,6 +33,14 @@ export type RegulatoryRecord = {
   sourceUrl: string;
   evidenceStatus: EvidenceStatus;
   reviewStatus: ReviewStatus;
+  verifiedVersionId?: number;
+  versionId?: number;
+  versionDocumentId?: string;
+  versionReviewStatus?: ReviewStatus;
+  evidenceDocumentId?: string;
+  evidenceVersionId?: number;
+  evidenceReviewStatus?: ReviewStatus;
+  lastVerifiedAt?: Date;
   effectiveDate?: string;
   summary: string;
   version?: string;
@@ -65,7 +73,17 @@ export function evaluateApplicability(profile: CompanyProfile, records: Regulato
   return records.map((record) => {
     const missingInformation: string[] = [];
     const triggeredAttributes: string[] = [];
-    const definitiveEvidence = record.evidenceStatus === "official-verified" && record.reviewStatus === "verified";
+    const definitiveEvidence = record.evidenceStatus === "official-verified"
+      && record.reviewStatus === "verified"
+      && record.verifiedVersionId !== undefined
+      && record.versionId === record.verifiedVersionId
+      && record.versionDocumentId === record.id
+      && record.versionReviewStatus === "verified"
+      && record.evidenceDocumentId === record.id
+      && record.evidenceVersionId === record.verifiedVersionId
+      && record.evidenceReviewStatus === "verified"
+      && record.lastVerifiedAt instanceof Date
+      && !Number.isNaN(record.lastVerifiedAt.getTime());
     if (record.jurisdiction !== "federal" && record.jurisdiction !== profile.jurisdiction) {
       return result(record, "does-not-apply", [], [], "The regulatory record is outside the company jurisdiction.");
     }

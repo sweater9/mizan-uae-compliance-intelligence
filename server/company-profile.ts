@@ -1,7 +1,7 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { getDatabase } from "../lib/db";
 import { applicabilityAssessments, applicabilityResults, companyProfiles } from "../lib/company-profile-schema";
-import { regulatoryDocuments } from "../lib/regulatory-schema";
+import { regulatoryDocuments, regulatoryEvidence, regulatoryVersions } from "../lib/regulatory-schema";
 import { evaluateApplicability, type CompanyProfile, type RegulatoryRecord } from "../lib/applicability";
 import { validateCompanyProfile } from "../lib/profile-validation";
 
@@ -30,11 +30,31 @@ function asProfile(row: typeof companyProfiles.$inferSelect): CompanyProfile & {
   };
 }
 
-function asRecord(row: typeof regulatoryDocuments.$inferSelect): RegulatoryRecord {
+type VerifiedChain = {
+  verifiedVersionId: number;
+  versionId: number;
+  versionDocumentId: string;
+  versionReviewStatus: "verified";
+  evidenceDocumentId: string;
+  evidenceVersionId: number;
+  evidenceReviewStatus: "verified";
+  lastVerifiedAt: Date;
+};
+
+function asRecord(row: typeof regulatoryDocuments.$inferSelect, verifiedChain?: VerifiedChain): RegulatoryRecord {
   return {
     id: row.id, title: row.title, jurisdiction: row.jurisdiction as RegulatoryRecord["jurisdiction"],
     authorities: [row.authority], appliesTo: row.applicabilityRules, matchMode: row.applicabilityMatchMode as "all" | "any",
-    sourceUrl: row.officialSourceUrl, evidenceStatus: row.evidenceStatus, reviewStatus: row.verifiedVersionId && row.lastVerifiedAt ? "verified" : "pending",
+    sourceUrl: row.officialSourceUrl, evidenceStatus: row.evidenceStatus,
+    reviewStatus: verifiedChain ? "verified" : "pending",
+    verifiedVersionId: verifiedChain?.verifiedVersionId,
+    versionId: verifiedChain?.versionId,
+    versionDocumentId: verifiedChain?.versionDocumentId,
+    versionReviewStatus: verifiedChain?.versionReviewStatus,
+    evidenceDocumentId: verifiedChain?.evidenceDocumentId,
+    evidenceVersionId: verifiedChain?.evidenceVersionId,
+    evidenceReviewStatus: verifiedChain?.evidenceReviewStatus,
+    lastVerifiedAt: verifiedChain?.lastVerifiedAt,
     effectiveDate: row.effectiveDate ?? undefined, summary: row.summary, version: row.verifiedVersionId ? String(row.verifiedVersionId) : undefined,
   };
 }
@@ -91,8 +111,43 @@ export async function handleApplicability(request: Request) {
     if (typeof body?.profileId !== "string" || body.profileId.length > 100) return json({ error: "profileId is required." }, 400);
     const profileRows = await db.select().from(companyProfiles).where(eq(companyProfiles.id, body.profileId)).limit(1);
     if (!profileRows[0]) return json({ error: "Company profile not found." }, 404);
-    const records = await db.select().from(regulatoryDocuments);
-    const results = evaluateApplicability(asProfile(profileRows[0]), records.filter((record) => record.status === "in-force" || record.status === "amended").map(asRecord));
+    // Applicability only evaluates current instruments; the evidence gate below
+    // separately determines whether a definitive result is possible.
+    const records = await db.select().from(regulatoryDocuments).where(
+      inArray(regulatoryDocuments.status, ["in-force", "amended"]),
+    );
+    const eligibleChains = await db.select({
+      documentId: regulatoryDocuments.id,
+      verifiedVersionId: regulatoryDocuments.verifiedVersionId,
+      lastVerifiedAt: regulatoryDocuments.lastVerifiedAt,
+      versionId: regulatoryVersions.id,
+      versionDocumentId: regulatoryVersions.documentId,
+      versionReviewStatus: regulatoryVersions.reviewStatus,
+      evidenceDocumentId: regulatoryEvidence.documentId,
+      evidenceVersionId: regulatoryEvidence.versionId,
+      evidenceReviewStatus: regulatoryEvidence.reviewStatus,
+    }).from(regulatoryDocuments)
+      .innerJoin(regulatoryVersions, eq(regulatoryVersions.id, regulatoryDocuments.verifiedVersionId))
+      .innerJoin(regulatoryEvidence, and(
+        eq(regulatoryEvidence.documentId, regulatoryDocuments.id),
+        eq(regulatoryEvidence.versionId, regulatoryVersions.id),
+        eq(regulatoryEvidence.sourceId, regulatoryDocuments.sourceId),
+      ))
+      .where(and(
+        eq(regulatoryDocuments.evidenceStatus, "official-verified"),
+        isNotNull(regulatoryDocuments.verifiedVersionId),
+        isNotNull(regulatoryDocuments.lastVerifiedAt),
+        inArray(regulatoryDocuments.status, ["in-force", "amended"]),
+        eq(regulatoryVersions.reviewStatus, "verified"),
+        eq(regulatoryEvidence.reviewStatus, "verified"),
+      ));
+    const chainByDocument = new Map<string, VerifiedChain>();
+    for (const chain of eligibleChains) {
+      if (!chainByDocument.has(chain.documentId) && chain.verifiedVersionId !== null && chain.lastVerifiedAt !== null) {
+        chainByDocument.set(chain.documentId, chain as VerifiedChain);
+      }
+    }
+    const results = evaluateApplicability(asProfile(profileRows[0]), records.map((record) => asRecord(record, chainByDocument.get(record.id))));
     const assessmentId = crypto.randomUUID();
     await db.insert(applicabilityAssessments).values({ id: assessmentId, profileId: body.profileId });
     if (results.length) await db.insert(applicabilityResults).values(results.map((result) => ({
