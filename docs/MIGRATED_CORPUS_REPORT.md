@@ -10,10 +10,11 @@ Target repository: `sweater9/mizan-uae-compliance-intelligence`
 
 - Legacy instruments assessed: 104
 - Records added to the migration corpus: 90
+- Records reviewed in the per-record audit ledger: 90
 - Records independently promoted to `official-verified`: 0
 - Records retained as `official-source-pending-review`: 90
 - Records rejected before migration: 14
-- Live production database deduplication: performed again at seed time against document identity and official URL; no database credentials are required for static validation
+- Live production database deduplication: guarded in the seeder against normalized document identity and canonical official URL; not run because `MIZAN_DATABASE_URL` was unavailable in this environment
 
 Legacy `last_verified` values are retained only as provenance claims. They never set `last_verified_at`, a verified version, a verified evidence review, or `official-verified` status in the target schema.
 
@@ -50,6 +51,7 @@ Every accepted record uses an HTTPS URL on the migration allowlist. On 2026-09-0
 - 1 Ministry DNFBP guidance entry was rejected because the cited official PDF returned HTTP 404.
 
 The machine-readable rejection audit is stored in `data/migrated-regulatory-corpus-rejections.json`.
+The per-record verification ledger is stored in `data/migrated-regulatory-corpus-review.json`. It records the source response, every required verification dimension, and the precise reason each record remains pending.
 
 ## Evidence and version safeguards
 
@@ -66,7 +68,9 @@ The migration seeder:
 ## Remaining coverage gaps
 
 - The 75 records blocked by official-site anti-automation controls need human or approved-browser instrument-level review.
+- The 15 records that returned a successful official-page response are still not verified: page reachability did not reconfirm the instrument substantively.
 - Instrument status, publication date and effective date remain pending where the legacy corpus did not provide independently reconfirmed dates.
-- The rejected Cabinet Resolution citation and Ministry DNFBP guidance URL need replacement official instrument URLs.
+- The rejected Cabinet Resolution citation and Ministry DNFBP guidance URL were not resolved in this pass; no independently confirmed replacement official instrument URLs were found.
 - Federal emirate-level regulators and licensing authorities outside the current federal/Dubai/DIFC/ADGM set need a separate scoped coverage pass.
 - Pending records will not be exposed by the verified-only production repository until existing evidence review safeguards are completed.
+- The guarded migrated-corpus seeder was not executed because production database credentials were unavailable; no production-seeding result is claimed.

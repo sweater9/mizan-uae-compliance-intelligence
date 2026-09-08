@@ -10,13 +10,14 @@ const fetchedAt = new Date().toISOString();
 
 const existing = await sql`select id, title, instrument_number, official_source_url from regulatory_documents`;
 const existingKeys = new Set(existing.map((record) => normalizeInstrument(record.instrument_number) || normalizeInstrument(record.title)));
-const existingUrls = new Set(existing.map((record) => record.official_source_url));
+const existingUrls = new Set(existing.map((record) => new URL(record.official_source_url).toString()));
 let added = 0;
 let skipped = 0;
 
 for (const record of records) {
   const instrumentKey = normalizeInstrument(record.instrumentNumber) || normalizeInstrument(record.title);
-  if (existingKeys.has(instrumentKey) || (existingUrls.has(record.officialSourceUrl) && !record.instrumentNumber)) {
+  const canonicalUrl = new URL(record.officialSourceUrl).toString();
+  if (existingKeys.has(instrumentKey) || existingUrls.has(canonicalUrl)) {
     skipped += 1;
     continue;
   }
@@ -68,7 +69,7 @@ for (const record of records) {
       'Migrated from sweater9/mizan-uae-legal-research. The legacy verification claim was not trusted; official instrument review is required before publication.')
   `;
   existingKeys.add(instrumentKey);
-  existingUrls.add(record.officialSourceUrl);
+  existingUrls.add(canonicalUrl);
   added += 1;
 }
 

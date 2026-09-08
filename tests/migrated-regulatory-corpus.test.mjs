@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
+import { buildCorpusReview } from "../scripts/audit-migrated-corpus.mjs";
 import { loadAndValidateMigratedCorpus } from "../scripts/validate-migrated-corpus.mjs";
 
 test("migrated corpus is substantial, deduplicated and pending official review", () => {
@@ -20,4 +21,16 @@ test("migration seed cannot promote legacy material to official-verified", () =>
   assert.doesNotMatch(seed, /update\s+regulatory_documents/i);
   assert.match(seed, /'official-source-pending-review'/);
   assert.match(seed, /on conflict \(id\) do nothing/);
+  assert.match(seed, /existingUrls\.has\(canonicalUrl\)/);
+});
+
+test("every accepted record has an auditable pending review entry", () => {
+  const review = buildCorpusReview();
+  assert.equal(review.summary.recordsReviewed, 90);
+  assert.equal(review.summary.newlyVerified, 0);
+  assert.equal(review.summary.pending, 90);
+  assert.equal(review.records.length, 90);
+  assert.ok(review.records.every((record) => record.evidenceStatus === "official-source-pending-review"));
+  assert.ok(review.records.every((record) => record.reviewState === "pending"));
+  assert.ok(review.records.every((record) => record.verification.citationConsistency === "unconfirmed"));
 });
