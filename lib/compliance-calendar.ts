@@ -2,6 +2,7 @@ export type CalendarState = "overdue" | "due-today" | "next-7-days" | "next-30-d
 
 export type VerifiedCalendarItem = {
   id: string;
+  regulatoryDocumentId: string;
   obligationTitle: string;
   description: string;
   dueDate: string;
