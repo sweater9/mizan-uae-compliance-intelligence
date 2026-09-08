@@ -70,7 +70,7 @@ export async function getComplianceCalendar(profileId: string, asOf = new Date()
         jurisdictionMatches: item.jurisdiction === documentJurisdiction,
       })) return [];
     return [{
-      id: item.id, obligationTitle: definition.obligationTitle, description: definition.description,
+      id: item.id, regulatoryDocumentId: item.regulatoryDocumentId, obligationTitle: definition.obligationTitle, description: definition.description,
       dueDate: definition.dueDate, effectiveDate: definition.effectiveDate ?? undefined,
       recurrenceRule: definition.recurrenceRule ?? undefined, authority: definition.authority, jurisdiction: definition.jurisdiction,
       deadlineBasis: definition.deadlineBasis as "explicit-official-date" | "explicit-official-recurrence",
