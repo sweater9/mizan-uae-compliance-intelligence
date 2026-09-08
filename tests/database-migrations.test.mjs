@@ -23,8 +23,26 @@ test("migration metadata is PostgreSQL and identifies the readiness baseline", a
   assert.ok(journal.entries.length >= 1);
   assert.equal(journal.entries[0].when, REQUIRED_MIGRATION_TIMESTAMP);
   assert.equal(journal.entries[0].tag, "0000_left_justin_hammer");
-  assert.match(journal.entries.at(-1).tag, /^0003_/);
+  assert.match(journal.entries.at(-1).tag, /^0005_/);
   assert.ok(journal.entries.every((entry, index) => index === 0 || entry.when > journal.entries[index - 1].when));
+});
+
+test("change monitor migration creates an alert table linked to verified source records", async () => {
+  const migration = await readFile(new URL("../drizzle/0004_clever_juggernaut.sql", import.meta.url), "utf8");
+  assert.match(migration, /CREATE TABLE "regulatory_change_alerts"/);
+  assert.match(migration, /current_version_id/);
+  assert.match(migration, /current_evidence_id/);
+  assert.match(migration, /regulatory_change_alerts_current_version_id/);
+  assert.match(migration, /regulatory_change_alerts_current_evidence_id/);
+});
+
+test("change definition migration creates the authoritative comparison and alert link", async () => {
+  const migration = await readFile(new URL("../drizzle/0005_lean_tiger_shark.sql", import.meta.url), "utf8");
+  assert.match(migration, /CREATE TABLE "regulatory_change_definitions"/);
+  assert.match(migration, /regulatory_change_definitions_current_version_id/);
+  assert.match(migration, /regulatory_change_definitions_current_evidence_id/);
+  assert.match(migration, /ADD COLUMN "change_definition_id"/);
+  assert.match(migration, /regulatory_change_alerts_change_definition_id/);
 });
 
 test("initial migration creates constrained evidence and verified-version model", async () => {
