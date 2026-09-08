@@ -1,5 +1,7 @@
 import { apiHeaders, enterRequest, preflight } from "../../../lib/api-security";
 import { getRegulatoryChanges } from "../../../server/regulatory-change-monitor";
+import { authErrorResponse } from "../../../lib/auth";
+import { requireProfileAccess } from "../../../lib/workspace-authorization";
 
 export function OPTIONS(request: Request) { return preflight(request, "GET, OPTIONS"); }
 
@@ -11,6 +13,9 @@ export async function GET(request: Request) {
   try {
     const params = new URL(request.url).searchParams;
     const profileId = params.get("profileId") || undefined;
+    const workspaceId = params.get("workspaceId") || "";
+    if (!profileId) return Response.json({ error: "profileId is required." }, { status: 400, headers });
+    try { await requireProfileAccess(request, profileId, workspaceId); } catch (error) { return authErrorResponse(error) ?? Response.json({ error: "Authentication could not be verified." }, { status: 401, headers }); }
     const jurisdiction = params.get("jurisdiction") || undefined;
     const authority = params.get("authority") || undefined;
     const changeType = params.get("changeType") || undefined;

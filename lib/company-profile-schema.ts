@@ -1,8 +1,10 @@
 import { boolean, index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { regulatoryDocuments } from "./regulatory-schema";
+import { workspaces } from "./auth-schema";
 
 export const companyProfiles = pgTable("company_profiles", {
   id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
   ownerKey: text("owner_key"),
   legalName: text("legal_name").notNull(),
   jurisdiction: text("jurisdiction").notNull(),
@@ -21,7 +23,7 @@ export const companyProfiles = pgTable("company_profiles", {
   freeZoneStatus: text("free_zone_status"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index("company_profiles_workspace_idx").on(table.workspaceId)]);
 
 export const applicabilityAssessments = pgTable("applicability_assessments", {
   id: text("id").primaryKey(),
