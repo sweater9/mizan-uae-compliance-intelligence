@@ -34,6 +34,10 @@ jobs:
         run: node scripts/seed-cma-baseline.mjs
         env:
           MIZAN_DATABASE_URL: ${{ secrets.MIZAN_DATABASE_URL }}
+      - name: Seed verified KYC platform baseline
+        run: node scripts/seed-kyc-platform-baseline.mjs
+        env:
+          MIZAN_DATABASE_URL: ${{ secrets.MIZAN_DATABASE_URL }}
       - name: Verify production database readiness
         run: npm run db:check
         env:
