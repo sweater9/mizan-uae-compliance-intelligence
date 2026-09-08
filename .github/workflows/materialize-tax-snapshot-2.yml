@@ -1,0 +1,37 @@
+name: Materialize Tax Planner snapshot retry
+
+on:
+  push:
+    branches:
+      - feat/tax-reserve-planner
+    paths:
+      - .github/workflows/materialize-tax-snapshot-2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tax-reserve-planner
+      - name: Reconstruct exact generated snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in 00 01 02 03 04 05 06 07; do test -f ".tax-snapshot-parts/part-$i"; done
+          cat .tax-snapshot-parts/part-* | base64 --decode > drizzle/meta/0006_snapshot.json
+          test "$(wc -c < drizzle/meta/0006_snapshot.json)" -eq 69516
+          echo "3719bf5b2d1c4cb4132deb629a3416d38eead1ba2a0d051637222ced75902fe8  drizzle/meta/0006_snapshot.json" | sha256sum --check --strict
+      - name: Commit snapshot and remove transfer parts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add drizzle/meta/0006_snapshot.json
+          git rm -r .tax-snapshot-parts
+          git commit -m "Add Tax Reserve Planner Drizzle snapshot"
+          git push origin HEAD:feat/tax-reserve-planner
