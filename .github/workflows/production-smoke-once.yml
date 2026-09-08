@@ -26,10 +26,10 @@ jobs:
           ! grep -Eqi 'demo|prototype|fictional|sample company|NVIDIA' /tmp/root.html
 
           retry curl -fsS --max-time 30 "$BASE_URL/api/health" -o /tmp/health.json
-          node -e "const x=require('/tmp/health.json'); if (!(x.status==='healthy'||x.status==='ok')) throw Error(JSON.stringify(x))"
+          node -e "const x=require('/tmp/health.json'); if (x.status!=='ok') throw Error(JSON.stringify(x))"
 
           retry curl -fsS --max-time 30 "$BASE_URL/api/ready" -o /tmp/ready.json
-          node -e "const x=require('/tmp/ready.json'); if (!(x.status==='ready'||x.ready===true)) throw Error(JSON.stringify(x))"
+          node -e "const x=require('/tmp/ready.json'); if (x.status!=='ok' || x.checks?.assistantConfiguration!=='configured') throw Error(JSON.stringify(x))"
 
           for q in AML DFSA ADGM CMA KYC; do
             retry curl -fsS --get --max-time 30 --data-urlencode "q=$q" "$BASE_URL/api/regulatory-search" -o "/tmp/search-$q.json"
