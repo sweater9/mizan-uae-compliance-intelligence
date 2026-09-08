@@ -1,5 +1,3 @@
-import "server-only";
-
 import { and, eq, isNotNull } from "drizzle-orm";
 import { getDatabase } from "./db";
 import { regulatoryDocuments } from "./regulatory-schema";
