@@ -1,0 +1,47 @@
+name: Production Live Smoke Gate
+
+on:
+  push:
+    branches:
+      - production-smoke-once
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify production endpoints
+        shell: bash
+        env:
+          BASE_URL: https://mizan-uae-compliance-intelligence.onrender.com
+        run: |
+          set -euo pipefail
+          retry() { for i in 1 2 3 4 5; do "$@" && return 0; sleep 12; done; return 1; }
+          retry curl -fsS --max-time 30 "$BASE_URL/" -o /tmp/root.html
+          grep -qi 'Mizan' /tmp/root.html
+          ! grep -Eqi 'demo|prototype|fictional|sample company|NVIDIA' /tmp/root.html
+
+          retry curl -fsS --max-time 30 "$BASE_URL/api/health" -o /tmp/health.json
+          node -e "const x=require('/tmp/health.json'); if (!(x.status==='healthy'||x.status==='ok')) throw Error(JSON.stringify(x))"
+
+          retry curl -fsS --max-time 30 "$BASE_URL/api/ready" -o /tmp/ready.json
+          node -e "const x=require('/tmp/ready.json'); if (!(x.status==='ready'||x.ready===true)) throw Error(JSON.stringify(x))"
+
+          for q in AML DFSA ADGM CMA KYC; do
+            retry curl -fsS --get --max-time 30 --data-urlencode "q=$q" "$BASE_URL/api/regulatory-search" -o "/tmp/search-$q.json"
+            node -e "const x=require('/tmp/search-$q.json'); const r=x.results||x.data||[]; if(!Array.isArray(r)||r.length<1) throw Error('$q returned no results: '+JSON.stringify(x)); if(r.some(v => v.evidenceStatus && v.evidenceStatus!=='official-verified')) throw Error('$q exposed non-verified evidence')"
+          done
+
+          ask() { local q="$1" out="$2"; retry curl -fsS --max-time 30 -H 'Content-Type: application/json' -H "Origin: $BASE_URL" --data "{\"question\":\"$q\"}" "$BASE_URL/api/assistant" -o "$out"; }
+          ask 'What does the DFSA require regarding a risk-based AML approach?' /tmp/ask-dfsa.json
+          node -e "const x=require('/tmp/ask-dfsa.json'); if(x.verified!==true || !Array.isArray(x.sources) || x.sources.length<1 || !x.answer) throw Error(JSON.stringify(x))"
+          ask 'What AML/CTF expectations are recorded for financial institutions?' /tmp/ask-fi.json
+          node -e "const x=require('/tmp/ask-fi.json'); if(x.verified!==true || !Array.isArray(x.sources) || x.sources.length<1 || !x.answer) throw Error(JSON.stringify(x))"
+          ask 'What are the UAE rules for interplanetary mining licences on Mars?' /tmp/ask-none.json
+          node -e "const x=require('/tmp/ask-none.json'); const m='Mizan does not currently have sufficient verified regulatory information to answer this confidently.'; if(x.verified!==false || (x.sources||[]).length!==0 || x.answer!==m) throw Error(JSON.stringify(x))"
+
+          echo 'Production live smoke gate passed.'
