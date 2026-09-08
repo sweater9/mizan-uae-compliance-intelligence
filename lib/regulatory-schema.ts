@@ -38,6 +38,8 @@ export const regulatoryDocuments = pgTable("regulatory_documents", {
   topics: jsonb("topics").$type<string[]>().notNull().default([]),
   aliases: jsonb("aliases").$type<string[]>().notNull().default([]),
   applicability: jsonb("applicability").$type<string[]>().notNull().default([]),
+  applicabilityRules: jsonb("applicability_rules").$type<Array<{ attribute: string; values?: string[]; required?: boolean }>>().notNull().default([]),
+  applicabilityMatchMode: text("applicability_match_mode").notNull().default("all"),
   obligations: jsonb("obligations").$type<string[]>().notNull().default([]),
   relatedRecordIds: jsonb("related_record_ids").$type<string[]>().notNull().default([]),
   evidenceStatus: evidenceStatus("evidence_status").notNull().default("official-source-pending-review"),

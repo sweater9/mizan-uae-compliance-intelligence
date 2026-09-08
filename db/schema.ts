@@ -10,3 +10,8 @@ export {
   regulatoryEvidence,
   regulatoryUpdateRuns,
 } from "../lib/regulatory-schema";
+export {
+  companyProfiles,
+  applicabilityAssessments,
+  applicabilityResults,
+} from "../lib/company-profile-schema";
