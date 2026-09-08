@@ -19,6 +19,7 @@ jobs:
           BASE_URL: https://mizan-uae-compliance-intelligence.onrender.com
         run: |
           set -euo pipefail
+          echo 'Acceptance rerun after production Regulatory Search runtime fix.'
           get() { local label="$1" url="$2" out="$3"; echo "== $label =="; for i in 1 2 3 4 5; do code=$(curl -sS -L --max-time 30 -o "$out" -w '%{http_code}' "$url" || true); echo "$label attempt $i HTTP $code"; if [ "$code" = 200 ]; then return 0; fi; cat "$out" 2>/dev/null || true; sleep 12; done; return 1; }
           get root "$BASE_URL/" /tmp/root.html
           grep -qi 'Mizan' /tmp/root.html
