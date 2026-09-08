@@ -6,6 +6,7 @@ import { checkDatabaseReadiness, REQUIRED_MIGRATION_TIMESTAMP } from "../lib/dat
 const migrationUrl = new URL("../drizzle/0000_left_justin_hammer.sql", import.meta.url);
 const calendarMigrationUrl = new URL("../drizzle/0002_compliance_calendar.sql", import.meta.url);
 const provenanceMigrationUrl = new URL("../drizzle/0003_loving_viper.sql", import.meta.url);
+const taxRulesMigrationUrl = new URL("../drizzle/0006_tax_reserve_rules.sql", import.meta.url);
 const journalUrl = new URL("../drizzle/meta/_journal.json", import.meta.url);
 
 function mockNeon(...responses) {
@@ -23,7 +24,7 @@ test("migration metadata is PostgreSQL and identifies the readiness baseline", a
   assert.ok(journal.entries.length >= 1);
   assert.equal(journal.entries[0].when, REQUIRED_MIGRATION_TIMESTAMP);
   assert.equal(journal.entries[0].tag, "0000_left_justin_hammer");
-  assert.match(journal.entries.at(-1).tag, /^0005_/);
+  assert.match(journal.entries.at(-1).tag, /^0006_/);
   assert.ok(journal.entries.every((entry, index) => index === 0 || entry.when > journal.entries[index - 1].when));
 });
 
@@ -43,6 +44,15 @@ test("change definition migration creates the authoritative comparison and alert
   assert.match(migration, /regulatory_change_definitions_current_evidence_id/);
   assert.match(migration, /ADD COLUMN "change_definition_id"/);
   assert.match(migration, /regulatory_change_alerts_change_definition_id/);
+});
+
+test("tax reserve migration adds evidence-bound rules without seeding tax claims", async () => {
+  const migration = await readFile(taxRulesMigrationUrl, "utf8");
+  assert.match(migration, /CREATE TABLE "regulatory_tax_rules"/);
+  for (const field of ["regulatory_document_id", "verified_version_id", "evidence_id", "official_source_url", "last_verified_at"]) assert.match(migration, new RegExp(`"${field}"`));
+  assert.match(migration, /regulatory_tax_rules_verified_version_id_regulatory_versions_id_fk/);
+  assert.match(migration, /regulatory_tax_rules_evidence_id_regulatory_evidence_id_fk/);
+  assert.doesNotMatch(migration, /INSERT\s+INTO/i);
 });
 
 test("initial migration creates constrained evidence and verified-version model", async () => {
