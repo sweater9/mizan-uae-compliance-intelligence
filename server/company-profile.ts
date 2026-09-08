@@ -73,7 +73,9 @@ export async function handleCompanyProfile(request: Request) {
       dnfbpCategory: p.dnfbpCategory ?? null, freeZoneStatus: p.freeZoneStatus ?? null, updatedAt: new Date(),
     };
     if (request.method === "PUT") {
-      const { id: _id, ownerKey: _ownerKey, ...updateValues } = values;
+      const updateValues = { ...values };
+      delete updateValues.id;
+      delete updateValues.ownerKey;
       const updated = await db.update(companyProfiles).set(updateValues).where(eq(companyProfiles.id, profileId)).returning();
       return updated[0] ? json({ profile: asProfile(updated[0]) }) : json({ error: "Company profile not found." }, 404);
     }
