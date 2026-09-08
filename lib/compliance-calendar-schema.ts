@@ -7,6 +7,7 @@ export const complianceCalendarItems = pgTable("compliance_calendar_items", {
   profileId: text("profile_id").notNull().references(() => companyProfiles.id),
   regulatoryDocumentId: text("regulatory_document_id").notNull().references(() => regulatoryDocuments.id),
   applicabilityResultId: text("applicability_result_id").notNull().references(() => applicabilityResults.id),
+  deadlineDefinitionId: text("deadline_definition_id").notNull().references(() => regulatoryDeadlineDefinitions.id),
   verifiedVersionId: integer("verified_version_id").notNull().references(() => regulatoryVersions.id),
   evidenceId: integer("evidence_id").notNull().references(() => regulatoryEvidence.id),
   authority: text("authority").notNull(),
@@ -28,4 +29,26 @@ export const complianceCalendarItems = pgTable("compliance_calendar_items", {
 }, (table) => [
   index("compliance_calendar_items_profile_due_idx").on(table.profileId, table.dueDate),
   index("compliance_calendar_items_document_idx").on(table.regulatoryDocumentId),
+]);
+
+export const regulatoryDeadlineDefinitions = pgTable("regulatory_deadline_definitions", {
+  id: text("id").primaryKey(),
+  regulatoryDocumentId: text("regulatory_document_id").notNull().references(() => regulatoryDocuments.id),
+  verifiedVersionId: integer("verified_version_id").notNull().references(() => regulatoryVersions.id),
+  evidenceId: integer("evidence_id").notNull().references(() => regulatoryEvidence.id),
+  obligationTitle: text("obligation_title").notNull(),
+  description: text("description").notNull(),
+  effectiveDate: date("effective_date"),
+  dueDate: date("due_date").notNull(),
+  recurrenceRule: text("recurrence_rule"),
+  deadlineBasis: text("deadline_basis").notNull().default("explicit-official-date"),
+  authority: text("authority").notNull(),
+  jurisdiction: text("jurisdiction").notNull(),
+  officialSourceUrl: text("official_source_url").notNull(),
+  evidenceStatus: text("evidence_status").notNull(),
+  lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("regulatory_deadline_definitions_document_idx").on(table.regulatoryDocumentId),
+  index("regulatory_deadline_definitions_due_idx").on(table.dueDate),
 ]);

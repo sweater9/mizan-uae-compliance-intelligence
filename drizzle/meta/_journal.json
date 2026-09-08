@@ -22,6 +22,13 @@
       "when": 1789000000000,
       "tag": "0002_compliance_calendar",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788884781503,
+      "tag": "0003_loving_viper",
+      "breakpoints": true
     }
   ]
 }

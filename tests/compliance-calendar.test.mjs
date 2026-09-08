@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { classifyCalendarItems, hasVerifiedCalendarEvidence } from "../lib/compliance-calendar.ts";
+import { classifyCalendarItems, hasVerifiedCalendarEvidence, isVerifiedDeadlineDefinition, materializeDeadline } from "../lib/compliance-calendar.ts";
 
 const item = (overrides = {}) => ({
   id: "deadline-1", obligationTitle: "Submit return", description: "Submit the verified return.",
@@ -71,4 +71,24 @@ test("only a complete verified evidence chain can support a definitive calendar 
 test("recurrence is accepted only when explicitly supported by the evidence-bound deadline basis", () => {
   assert.equal(classifyCalendarItems([item({ recurrenceRule: "annual", deadlineBasis: "explicit-official-date" })], new Date("2026-04-01")).items.length, 0);
   assert.equal(classifyCalendarItems([item({ recurrenceRule: "annual", deadlineBasis: "explicit-official-recurrence" })], new Date("2026-04-01")).items.length, 1);
+});
+
+test("calendar state cannot override the evidence-bound deadline definition", () => {
+  const definition = { id: "definition-1", regulatoryDocumentId: "doc-1", verifiedVersionId: 3, evidenceId: 8, dueDate: "2026-04-15", recurrenceRule: "annual", deadlineBasis: "explicit-official-recurrence", evidenceStatus: "official-verified" };
+  assert.deepEqual(materializeDeadline({ deadlineDefinitionId: "definition-1", dueDate: "2099-01-01", recurrenceRule: "forged" }, definition), { dueDate: "2026-04-15", recurrenceRule: "annual" });
+  assert.equal(materializeDeadline({ deadlineDefinitionId: "other", dueDate: "2026-04-15" }, definition), null);
+});
+
+test("deadline definitions must match the verified version and evidence", () => {
+  const chain = { evidenceId: 8, evidenceStatus: "official-verified", verifiedVersionId: 3, documentVerifiedVersionId: 3, documentLastVerifiedAt: new Date("2026-01-01"), versionDocumentId: "doc-1", documentId: "doc-1", versionReviewStatus: "verified", evidenceDocumentId: "doc-1", evidenceVersionId: 3, evidenceReviewStatus: "verified", evidenceUrl: "https://official.example/return", officialSourceUrl: "https://official.example/return", status: "in-force", jurisdictionMatches: true };
+  const definition = { id: "definition-1", regulatoryDocumentId: "doc-1", verifiedVersionId: 3, evidenceId: 8, dueDate: "2026-04-15", deadlineBasis: "explicit-official-date", evidenceStatus: "official-verified" };
+  assert.equal(isVerifiedDeadlineDefinition(definition, chain), true);
+  assert.equal(isVerifiedDeadlineDefinition({ ...definition, verifiedVersionId: 4 }, chain), false);
+  assert.equal(isVerifiedDeadlineDefinition({ ...definition, evidenceId: 9 }, chain), false);
+  assert.equal(isVerifiedDeadlineDefinition({ ...definition, evidenceStatus: "official-source-pending-review" }, chain), false);
+});
+
+test("completion changes do not change deadline provenance", () => {
+  const definition = { id: "definition-1", regulatoryDocumentId: "doc-1", verifiedVersionId: 3, evidenceId: 8, dueDate: "2026-04-15", deadlineBasis: "explicit-official-date", evidenceStatus: "official-verified" };
+  assert.deepEqual(materializeDeadline({ deadlineDefinitionId: definition.id, dueDate: "2026-04-15" }, definition), materializeDeadline({ deadlineDefinitionId: definition.id, dueDate: "2026-04-15" }, definition));
 });

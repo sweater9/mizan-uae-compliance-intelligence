@@ -29,6 +29,7 @@ export type CalendarAssessment = {
 };
 
 export type CalendarEvidenceChain = {
+  evidenceId?: number;
   evidenceStatus: string;
   verifiedVersionId?: number | null;
   documentVerifiedVersionId?: number | null;
@@ -44,6 +45,37 @@ export type CalendarEvidenceChain = {
   status: string;
   jurisdictionMatches: boolean;
 };
+
+export type DeadlineDefinition = {
+  id: string;
+  regulatoryDocumentId: string;
+  verifiedVersionId: number;
+  evidenceId: number;
+  dueDate: string;
+  recurrenceRule?: string;
+  deadlineBasis: "explicit-official-date" | "explicit-official-recurrence";
+  evidenceStatus: string;
+};
+
+export function isVerifiedDeadlineDefinition(definition: DeadlineDefinition, chain: CalendarEvidenceChain): boolean {
+  return hasVerifiedCalendarEvidence({
+    ...chain,
+    verifiedVersionId: definition.verifiedVersionId,
+    officialSourceUrl: chain.officialSourceUrl,
+  })
+    && definition.regulatoryDocumentId === chain.documentId
+    && definition.evidenceId === chain.evidenceId
+    && definition.evidenceStatus === "official-verified"
+    && (!definition.recurrenceRule || definition.deadlineBasis === "explicit-official-recurrence");
+}
+
+export function materializeDeadline(
+  calendar: { deadlineDefinitionId: string; dueDate?: string; recurrenceRule?: string },
+  definition: DeadlineDefinition,
+): { dueDate: string; recurrenceRule?: string } | null {
+  if (calendar.deadlineDefinitionId !== definition.id) return null;
+  return { dueDate: definition.dueDate, recurrenceRule: definition.recurrenceRule };
+}
 
 export function hasVerifiedCalendarEvidence(chain: CalendarEvidenceChain): boolean {
   return chain.evidenceStatus === "official-verified"
