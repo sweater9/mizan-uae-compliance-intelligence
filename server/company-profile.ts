@@ -65,7 +65,7 @@ export async function handleCompanyProfile(request: Request) {
     if (!validated.profile) return json({ error: "Invalid company profile.", details: validated.errors }, 400);
     const p = validated.profile;
     const values = {
-      id: profileId, ownerKey: null, legalName: p.legalName, jurisdiction: p.jurisdiction, authorities: p.authorities,
+      legalName: p.legalName, jurisdiction: p.jurisdiction, authorities: p.authorities,
       legalForm: p.legalForm ?? null, sector: p.sector ?? null, regulated: p.regulated ?? null,
       financialServices: p.financialServices ?? null, activities: p.activities,
       licenceCategory: p.licenceCategory ?? null, employeeBand: p.employeeBand ?? null, vatStatus: p.vatStatus ?? null,
@@ -73,13 +73,10 @@ export async function handleCompanyProfile(request: Request) {
       dnfbpCategory: p.dnfbpCategory ?? null, freeZoneStatus: p.freeZoneStatus ?? null, updatedAt: new Date(),
     };
     if (request.method === "PUT") {
-      const updateValues = { ...values };
-      delete updateValues.id;
-      delete updateValues.ownerKey;
-      const updated = await db.update(companyProfiles).set(updateValues).where(eq(companyProfiles.id, profileId)).returning();
+      const updated = await db.update(companyProfiles).set(values).where(eq(companyProfiles.id, profileId)).returning();
       return updated[0] ? json({ profile: asProfile(updated[0]) }) : json({ error: "Company profile not found." }, 404);
     }
-    const inserted = await db.insert(companyProfiles).values(values).returning();
+    const inserted = await db.insert(companyProfiles).values({ id: profileId, ownerKey: null, ...values }).returning();
     return json({ profile: asProfile(inserted[0]) }, 201);
   } catch { return json({ error: "The company profile could not be saved." }, 500); }
 }
