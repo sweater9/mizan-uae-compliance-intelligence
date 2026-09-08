@@ -9,12 +9,13 @@ export type WorkspaceAccess = AuthenticatedUser & { workspaceId: string; role: s
 type Jwk = JsonWebKey & { kid?: string; kty?: string };
 let jwksCache: { expiresAt: number; keys: Jwk[] } | undefined;
 
-function decode(value: string): Uint8Array {
+function decode(value: string): Uint8Array<ArrayBuffer> {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
-  return Uint8Array.from(atob(normalized), (character) => character.charCodeAt(0));
+  const bytes = Uint8Array.from(atob(normalized), (character) => character.charCodeAt(0));
+  return new Uint8Array(bytes);
 }
 
-function parseClaims(token: string): { header: { alg?: string; kid?: string }; claims: Claims; signingInput: Uint8Array; signature: Uint8Array } {
+function parseClaims(token: string): { header: { alg?: string; kid?: string }; claims: Claims; signingInput: Uint8Array<ArrayBuffer>; signature: Uint8Array<ArrayBuffer> } {
   if (token.length > 16_384) throw new Error("Session token is too large.");
   const parts = token.split(".");
   if (parts.length !== 3) throw new Error("Invalid session token.");
@@ -78,11 +79,7 @@ export async function requireWorkspaceAccess(request: Request, workspaceId: stri
   const user = await requireUser(request);
   const rows = await getDatabase().select({ role: workspaceMemberships.role }).from(workspaceMemberships)
     .innerJoin(workspaces, eq(workspaces.id, workspaceMemberships.workspaceId))
-    .where(and(eq(workspaceMemberships.userId, user.id), eq(workspaceMemberships.workspaceId, workspaceId))).limit(1);
-  if (!rows[0]) throw new Response(JSON.stringify({ error: "You do not have access to this workspace." }), { status: 403, headers: { "Content-Type": "application/json" } });
+    .where(and(eq(workspaceMemberships.workspaceId, workspaceId), eq(workspaceMemberships.userId, user.id))).limit(1);
+  if (!rows[0]) throw new Response(JSON.stringify({ error: "Resource not available." }), { status: 403, headers: { "Content-Type": "application/json" } });
   return { ...user, workspaceId, role: rows[0].role };
-}
-
-export function authErrorResponse(error: unknown) {
-  return error instanceof Response ? error : null;
 }
