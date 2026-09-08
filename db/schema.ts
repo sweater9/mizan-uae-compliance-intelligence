@@ -15,3 +15,4 @@ export {
   applicabilityAssessments,
   applicabilityResults,
 } from "../lib/company-profile-schema";
+export { complianceCalendarItems } from "../lib/compliance-calendar-schema";

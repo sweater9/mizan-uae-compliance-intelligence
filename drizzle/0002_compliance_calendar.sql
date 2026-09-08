@@ -1,0 +1,1 @@
+ALTER TABLE "compliance_calendar_items" ADD COLUMN "deadline_basis" text DEFAULT 'explicit-official-date' NOT NULL;
