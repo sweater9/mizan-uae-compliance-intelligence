@@ -55,7 +55,7 @@ const get = (profile: CompanyProfile, attribute: string): unknown => profile[att
 
 function matchesRule(profile: CompanyProfile, rule: RegulatoryRecord["appliesTo"][number]) {
   const value = get(profile, rule.attribute);
-  if (value === undefined || value === null || value === "") return "missing";
+  if (value === undefined || value === null || value === "" || value === "unknown") return "missing";
   if (!rule.values?.length) return value === true || (typeof value === "string" && value.trim().length > 0) || (Array.isArray(value) && value.length > 0) ? "match" : "no-match";
   const values = Array.isArray(value) ? value : [String(value)];
   return values.some((item) => rule.values?.includes(String(item))) ? "match" : "no-match";
