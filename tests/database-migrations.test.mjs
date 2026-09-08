@@ -18,9 +18,10 @@ function mockNeon(...responses) {
 test("migration metadata is PostgreSQL and identifies the readiness baseline", async () => {
   const journal = JSON.parse(await readFile(journalUrl, "utf8"));
   assert.equal(journal.dialect, "postgresql");
-  assert.equal(journal.entries.length, 1);
+  assert.ok(journal.entries.length >= 1);
   assert.equal(journal.entries[0].when, REQUIRED_MIGRATION_TIMESTAMP);
   assert.equal(journal.entries[0].tag, "0000_left_justin_hammer");
+  assert.equal(journal.entries.at(-1).tag, "0001_company_profile_applicability");
 });
 
 test("initial migration creates constrained evidence and verified-version model", async () => {
