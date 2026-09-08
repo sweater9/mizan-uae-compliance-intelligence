@@ -1,0 +1,38 @@
+name: Materialize auth migration metadata
+
+on:
+  push:
+    branches: [sweater9-auth-workspace-foundation]
+    paths:
+      - '.github/workflows/materialize-auth-migration.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: sweater9-auth-workspace-foundation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generate current Drizzle metadata
+        run: npm run db:generate
+      - name: Verify generator produced only expected metadata migration
+        run: |
+          test -f drizzle/0007_easy_metal_master.sql
+          test -f drizzle/meta/0006_snapshot.json
+          git status --short
+      - name: Commit generated metadata and remove temporary workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add drizzle/0007_easy_metal_master.sql drizzle/meta/0006_snapshot.json drizzle/meta/_journal.json
+          git rm .github/workflows/materialize-auth-migration.yml
+          git commit -m 'Synchronize auth workspace Drizzle metadata'
+          git push origin HEAD:sweater9-auth-workspace-foundation
