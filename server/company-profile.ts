@@ -93,7 +93,7 @@ export async function handleApplicability(request: Request) {
     const profileRows = await db.select().from(companyProfiles).where(eq(companyProfiles.id, body.profileId)).limit(1);
     if (!profileRows[0]) return json({ error: "Company profile not found." }, 404);
     const records = await db.select().from(regulatoryDocuments);
-    const results = evaluateApplicability(asProfile(profileRows[0]), records.map(asRecord));
+    const results = evaluateApplicability(asProfile(profileRows[0]), records.filter((record) => record.status === "in-force" || record.status === "amended").map(asRecord));
     const assessmentId = crypto.randomUUID();
     await db.insert(applicabilityAssessments).values({ id: assessmentId, profileId: body.profileId });
     if (results.length) await db.insert(applicabilityResults).values(results.map((result) => ({

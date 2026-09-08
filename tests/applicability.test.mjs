@@ -58,6 +58,11 @@ test("non-financial businesses do not match a financial-services-only record", (
   assert.equal(result.state, "does-not-apply");
 });
 
+test("records without structured applicability rules cannot become obligations", () => {
+  const result = evaluateApplicability(base, [record({ appliesTo: [] })])[0];
+  assert.equal(result.state, "insufficient-information");
+});
+
 test("missing profile attributes are conservative and explain the gap", () => {
   const result = evaluateApplicability({ ...base, vatStatus: "unknown" }, [record()])[0];
   assert.equal(result.state, "insufficient-information");

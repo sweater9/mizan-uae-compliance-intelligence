@@ -69,6 +69,9 @@ export function evaluateApplicability(profile: CompanyProfile, records: Regulato
     if (record.jurisdiction !== "federal" && record.jurisdiction !== profile.jurisdiction) {
       return result(record, "does-not-apply", [], [], "The regulatory record is outside the company jurisdiction.");
     }
+    if (record.appliesTo.length === 0) {
+      return result(record, "insufficient-information", [], ["structured applicability rules"], "The regulatory record does not yet contain structured applicability rules.");
+    }
     const ruleMatches = record.appliesTo.map((rule) => ({ rule, match: matchesRule(profile, rule) }));
     if (record.matchMode === "any") {
       const matching = ruleMatches.filter((entry) => entry.match === "match");
