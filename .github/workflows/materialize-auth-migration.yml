@@ -25,7 +25,7 @@ jobs:
         run: npm run db:generate
       - name: Verify generator produced expected snapshot and exactly one migration
         run: |
-          test -f drizzle/meta/0006_snapshot.json
+          test -f drizzle/meta/0007_snapshot.json
           migration="$(find drizzle -maxdepth 1 -type f -name '0007_*.sql' -print)"
           test -n "$migration"
           test "$(printf '%s\n' "$migration" | sed '/^$/d' | wc -l)" -eq 1
@@ -36,7 +36,7 @@ jobs:
           migration="$(cat /tmp/generated-migration)"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add "$migration" drizzle/meta/0006_snapshot.json drizzle/meta/_journal.json
+          git add "$migration" drizzle/meta/0007_snapshot.json drizzle/meta/_journal.json
           git rm .github/workflows/materialize-auth-migration.yml
           git commit -m 'Synchronize auth workspace Drizzle metadata'
           git push origin HEAD:sweater9-auth-workspace-foundation
