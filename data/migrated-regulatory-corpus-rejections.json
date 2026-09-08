@@ -1,0 +1,72 @@
+[
+  {
+    "legacyId": "federal-federal-decree-law-no-10-of-2025",
+    "title": "Federal Decree-Law No. 10 of 2025 — Anti-Money Laundering and Combating Terrorism and Proliferation Financing",
+    "reason": "production-duplicate: instrument is already present in a production seed"
+  },
+  {
+    "legacyId": "federal-cabinet-resolution-no-134-of-2025",
+    "title": "Cabinet Resolution No. 134 of 2025 — Executive Regulations of Federal Decree-Law No. 10 of 2025",
+    "reason": "citation-conflict: reuses the AML Decree-Law URL and requires instrument-level review"
+  },
+  {
+    "legacyId": "adgm-fsra-aml-rules-and-guidance",
+    "title": "FSRA AML Rules and Guidance — Anti-Money Laundering and Sanctions Rules and Guidance",
+    "reason": "production-duplicate: existing ADGM FSRA AML framework record uses the same official announcement"
+  },
+  {
+    "legacyId": "federal-federal-decree-law-no-32-of-2021-2",
+    "title": "Federal Decree-Law No. 32 of 2021 — Commercial Companies Law",
+    "reason": "legacy-duplicate: duplicates federal-federal-decree-law-no-32-of-2021"
+  },
+  {
+    "legacyId": "federal-federal-decree-law-no-34-of-2021-2",
+    "title": "Federal Decree-Law No. 34 of 2021 — Countering Rumors and Cybercrimes",
+    "reason": "legacy-duplicate: duplicates federal-federal-decree-law-no-34-of-2021"
+  },
+  {
+    "legacyId": "federal-federal-decree-law-no-46-of-2021-2",
+    "title": "Federal Decree-Law No. 46 of 2021 — Electronic Transactions and Trust Services",
+    "reason": "legacy-duplicate: duplicates federal-federal-decree-law-no-46-of-2021"
+  },
+  {
+    "legacyId": "federal-federal-decree-law-no-30-of-2024",
+    "title": "Federal Decree-Law No. 30 of 2024 — Know Your Client Digital Platform",
+    "reason": "production-duplicate: instrument is already present in a production seed"
+  },
+  {
+    "legacyId": "federal-cabinet-resolution-no-55-of-2026",
+    "title": "Cabinet Resolution No. 55 of 2026 — Executive Regulations of the KYC Digital Platform Law",
+    "reason": "production-duplicate: instrument is already present in a production seed"
+  },
+  {
+    "legacyId": "federal-cabinet-resolution-no-56-of-2026",
+    "title": "Cabinet Resolution No. 56 of 2026 — KYC Digital Platform Administrative Violations and Sanctions",
+    "reason": "production-duplicate: instrument is already present in a production seed"
+  },
+  {
+    "legacyId": "federal-federal-decree-law-no-51-of-2023-2",
+    "title": "Federal Decree-Law No. 51 of 2023 — Financial Restructuring and Bankruptcy Law",
+    "reason": "legacy-duplicate: duplicates federal-federal-decree-law-no-51-of-2023"
+  },
+  {
+    "legacyId": "difc-dfsa-aml-module-ver30-04-26-2",
+    "title": "DFSA AML Module [VER30/04-26] — Anti-Money Laundering, Counter-Terrorist Financing and Sanctions Module",
+    "reason": "legacy-duplicate: duplicates difc-dfsa-aml-module-ver30-04-26"
+  },
+  {
+    "legacyId": "federal-moet-dnfbp-aml-cft-cpf-guidance-march-2026",
+    "title": "MoET DNFBP AML/CFT/CPF Guidance — March 2026 — Guidelines for Designated Non-Financial Businesses and Professions",
+    "reason": "official-url-rejected: official Ministry URL returned 404 on 2026-09-08"
+  },
+  {
+    "legacyId": "federal-federal-decree-law-no-32-of-2025",
+    "title": "Federal Decree-Law No. 32 of 2025 — Capital Market Authority",
+    "reason": "production-duplicate: instrument is already present in a production seed"
+  },
+  {
+    "legacyId": "federal-federal-decree-law-no-33-of-2025",
+    "title": "Federal Decree-Law No. 33 of 2025 — Regulation of the Capital Market",
+    "reason": "production-duplicate: instrument is already present in a production seed"
+  }
+]

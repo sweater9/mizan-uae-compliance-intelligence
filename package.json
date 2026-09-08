@@ -18,6 +18,9 @@
     "db:migrate": "bash scripts/sites-env.sh -- drizzle-kit migrate",
     "db:check": "bash scripts/sites-env.sh -- tsx scripts/check-database-readiness.mjs",
     "db:push": "bash scripts/sites-env.sh -- drizzle-kit push",
+    "corpus:validate": "node scripts/validate-migrated-corpus.mjs",
+    "corpus:audit": "node scripts/audit-migrated-corpus.mjs",
+    "corpus:seed:migrated": "node scripts/seed-migrated-regulatory-corpus.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
