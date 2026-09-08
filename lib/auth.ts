@@ -57,6 +57,10 @@ function tokenFromRequest(request: Request) {
   return cookie?.slice("mizan_session=".length) || null;
 }
 
+export function authErrorResponse(error: unknown): Response | null {
+  return error instanceof Response ? error : null;
+}
+
 export async function requireUser(request: Request): Promise<AuthenticatedUser> {
   const token = tokenFromRequest(request);
   if (!token) throw new Response(JSON.stringify({ error: "Authentication required." }), { status: 401, headers: { "Content-Type": "application/json" } });
