@@ -9,7 +9,12 @@ const chain = (overrides = {}) => ({
   previousVersionId: 1, previousVersionDocumentId: "doc-1", previousVersionReviewStatus: "verified",
   evidenceId: 22, evidenceDocumentId: "doc-1", evidenceVersionId: 2,
   evidenceReviewStatus: "verified", evidenceUrl: "https://official.example/change",
-  officialSourceUrl: "https://official.example/change", ...overrides,
+  officialSourceUrl: "https://official.example/change",
+  definitionDocumentId: "doc-1", definitionChangeType: "amendment",
+  definitionPreviousVersionId: 1, definitionCurrentVersionId: 2, definitionCurrentEvidenceId: 22,
+  definitionSummary: "Verified amendment", definitionAffectedObligations: ["Report"],
+  definitionOfficialSourceUrl: "https://official.example/change",
+  definitionEvidenceStatus: "official-verified", definitionLastVerifiedAt: new Date("2026-08-01"), ...overrides,
 });
 
 test("verified old and new versions with matching evidence produce a definitive change", () => {
@@ -60,4 +65,46 @@ test("insufficient applicability is never treated as definitive company applicab
 
 test("descriptive text alone cannot create a change", () => {
   assert.equal(isDefinitiveChange(chain({ currentVersionId: 1, previousVersionId: 1 })), false);
+});
+
+test("alert-owned claims cannot override the verified definition", () => {
+  const verified = chain();
+  assert.equal(isDefinitiveChange({ ...verified, definitionSummary: "" }), false);
+  assert.equal(isDefinitiveChange({ ...verified, definitionEffectiveDate: "2026-01-01" }), true);
+});
+
+test("definition version and evidence mismatches are rejected", () => {
+  for (const overrides of [
+    { definitionPreviousVersionId: 3 },
+    { definitionCurrentVersionId: 3 },
+    { definitionCurrentEvidenceId: 99 },
+    { definitionDocumentId: "other-doc" },
+    { definitionEvidenceStatus: "official-source-pending-review" },
+    { definitionEvidenceStatus: "rejected" },
+  ]) assert.equal(isDefinitiveChange(chain(overrides)), false);
+});
+
+test("new regulations require explicit new classification and may omit a previous version", () => {
+  assert.equal(isDefinitiveChange(chain({
+    definitionChangeType: "new-regulation",
+    definitionPreviousVersionId: null,
+    previousVersionId: null,
+    previousVersionDocumentId: null,
+    previousVersionReviewStatus: null,
+  })), true);
+  assert.equal(isDefinitiveChange(chain({
+    definitionChangeType: "new-regulation",
+    definitionPreviousVersionId: 1,
+    previousVersionId: 1,
+  })), false);
+  assert.equal(isDefinitiveChange(chain({
+    definitionChangeType: "amendment",
+    definitionPreviousVersionId: null,
+    previousVersionId: null,
+  })), false);
+});
+
+test("applicability state is independent of regulatory-change provenance", () => {
+  assert.equal(isDefinitiveChange(chain()), true);
+  assert.equal(isDefinitiveChange(chain({ definitionSummary: "Same verified amendment" })), true);
 });

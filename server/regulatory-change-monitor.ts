@@ -3,7 +3,7 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { getDatabase } from "../lib/db";
 import { applicabilityAssessments, applicabilityResults, companyProfiles } from "../lib/company-profile-schema";
 import { regulatoryDocuments, regulatoryEvidence, regulatoryVersions } from "../lib/regulatory-schema";
-import { regulatoryChangeAlerts } from "../lib/regulatory-change-schema";
+import { regulatoryChangeAlerts, regulatoryChangeDefinitions } from "../lib/regulatory-change-schema";
 import { filterAndSortChanges, isDefinitiveChange, type ChangeItem } from "../lib/regulatory-change-monitor";
 
 const previousVersions = alias(regulatoryVersions, "previous_versions");
@@ -14,6 +14,7 @@ export async function getRegulatoryChanges(profileId?: string, filters: { jurisd
   if (profileId && !profile) return { state: "insufficient-verified-evidence" as const, items: [] as ChangeItem[] };
   const rows = await db.select({
     alert: regulatoryChangeAlerts,
+    definition: regulatoryChangeDefinitions,
     document: regulatoryDocuments,
     currentVersion: regulatoryVersions,
     currentEvidence: regulatoryEvidence,
@@ -21,10 +22,11 @@ export async function getRegulatoryChanges(profileId?: string, filters: { jurisd
     applicabilityState: applicabilityResults.state,
     applicabilityProfileId: applicabilityAssessments.profileId,
   }).from(regulatoryChangeAlerts)
-    .innerJoin(regulatoryDocuments, eq(regulatoryDocuments.id, regulatoryChangeAlerts.regulatoryDocumentId))
-    .innerJoin(regulatoryVersions, eq(regulatoryVersions.id, regulatoryChangeAlerts.currentVersionId))
-    .leftJoin(previousVersions, eq(previousVersions.id, regulatoryChangeAlerts.previousVersionId))
-    .innerJoin(regulatoryEvidence, eq(regulatoryEvidence.id, regulatoryChangeAlerts.currentEvidenceId))
+    .innerJoin(regulatoryChangeDefinitions, eq(regulatoryChangeDefinitions.id, regulatoryChangeAlerts.changeDefinitionId))
+    .innerJoin(regulatoryDocuments, eq(regulatoryDocuments.id, regulatoryChangeDefinitions.regulatoryDocumentId))
+    .innerJoin(regulatoryVersions, eq(regulatoryVersions.id, regulatoryChangeDefinitions.currentVersionId))
+    .leftJoin(previousVersions, eq(previousVersions.id, regulatoryChangeDefinitions.previousVersionId))
+    .innerJoin(regulatoryEvidence, eq(regulatoryEvidence.id, regulatoryChangeDefinitions.currentEvidenceId))
     .leftJoin(applicabilityResults, eq(applicabilityResults.id, regulatoryChangeAlerts.applicabilityResultId))
     .leftJoin(applicabilityAssessments, eq(applicabilityAssessments.id, applicabilityResults.assessmentId))
     .where(and(
@@ -32,35 +34,44 @@ export async function getRegulatoryChanges(profileId?: string, filters: { jurisd
       eq(regulatoryDocuments.evidenceStatus, "official-verified"),
       isNotNull(regulatoryDocuments.verifiedVersionId),
       isNotNull(regulatoryDocuments.lastVerifiedAt),
-      eq(regulatoryDocuments.verifiedVersionId, regulatoryChangeAlerts.currentVersionId),
-      eq(regulatoryVersions.documentId, regulatoryChangeAlerts.regulatoryDocumentId),
+      eq(regulatoryDocuments.verifiedVersionId, regulatoryChangeDefinitions.currentVersionId),
+      eq(regulatoryVersions.documentId, regulatoryChangeDefinitions.regulatoryDocumentId),
       eq(regulatoryVersions.reviewStatus, "verified"),
-      eq(regulatoryEvidence.documentId, regulatoryChangeAlerts.regulatoryDocumentId),
-      eq(regulatoryEvidence.id, regulatoryChangeAlerts.currentEvidenceId),
-      eq(regulatoryEvidence.versionId, regulatoryChangeAlerts.currentVersionId),
+      eq(regulatoryEvidence.documentId, regulatoryChangeDefinitions.regulatoryDocumentId),
+      eq(regulatoryEvidence.id, regulatoryChangeDefinitions.currentEvidenceId),
+      eq(regulatoryEvidence.versionId, regulatoryChangeDefinitions.currentVersionId),
       eq(regulatoryEvidence.sourceId, regulatoryDocuments.sourceId),
       eq(regulatoryEvidence.reviewStatus, "verified"),
     ));
   const items = rows.flatMap((row) => {
-    const { alert, document, currentVersion, currentEvidence, previousVersion, applicabilityState, applicabilityProfileId } = row;
+    const { alert, definition, document, currentVersion, currentEvidence, previousVersion, applicabilityState, applicabilityProfileId } = row;
     if (!isDefinitiveChange({
       documentId: document.id, documentEvidenceStatus: document.evidenceStatus,
       documentVerifiedVersionId: document.verifiedVersionId, documentLastVerifiedAt: document.lastVerifiedAt,
       documentStatus: document.status, currentVersionId: currentVersion.id, currentVersionDocumentId: currentVersion.documentId,
-      currentVersionReviewStatus: currentVersion.reviewStatus, previousVersionId: alert.previousVersionId,
+      currentVersionReviewStatus: currentVersion.reviewStatus, previousVersionId: definition.previousVersionId,
       previousVersionDocumentId: previousVersion?.documentId, previousVersionReviewStatus: previousVersion?.reviewStatus,
       evidenceId: currentEvidence.id, evidenceDocumentId: currentEvidence.documentId, evidenceVersionId: currentEvidence.versionId,
-      evidenceReviewStatus: currentEvidence.reviewStatus, evidenceUrl: currentEvidence.url, officialSourceUrl: alert.officialSourceUrl,
+      evidenceReviewStatus: currentEvidence.reviewStatus, evidenceUrl: currentEvidence.url, officialSourceUrl: definition.officialSourceUrl,
+      definitionChangeType: definition.changeType, definitionPreviousVersionId: definition.previousVersionId,
+      definitionDocumentId: definition.regulatoryDocumentId,
+      definitionCurrentVersionId: definition.currentVersionId, definitionCurrentEvidenceId: definition.currentEvidenceId,
+      definitionSummary: definition.summary, definitionAffectedObligations: definition.affectedObligations,
+      definitionIssuedDate: definition.issuedDate, definitionEffectiveDate: definition.effectiveDate,
+      definitionOfficialSourceUrl: definition.officialSourceUrl, definitionEvidenceStatus: definition.evidenceStatus,
+      definitionLastVerifiedAt: definition.lastVerifiedAt,
     })) return [];
     const applicability: ChangeItem["applicability"] = profile && applicabilityProfileId === profile.id
       ? applicabilityState === "applies" ? "applies" : applicabilityState === "does-not-apply" ? "not-applicable" : "insufficient-information"
       : "not-assessed";
     return [{
-      id: alert.id, authority: alert.authority, jurisdiction: alert.jurisdiction, changeType: alert.changeType as ChangeItem["changeType"],
-      issuedDate: alert.issuedDate ?? undefined, effectiveDate: alert.effectiveDate ?? undefined, summary: alert.summary,
-      affectedObligations: alert.affectedObligations, officialSourceUrl: alert.officialSourceUrl,
-      currentVersionId: alert.currentVersionId, previousVersionId: alert.previousVersionId ?? undefined,
-      currentEvidenceId: alert.currentEvidenceId, lastVerifiedAt: alert.lastVerifiedAt.toISOString(), applicability,
+      id: alert.id, definitionId: definition.id, authority: document.authority, jurisdiction: document.jurisdiction,
+      changeType: definition.changeType as ChangeItem["changeType"],
+      issuedDate: definition.issuedDate ?? undefined, effectiveDate: definition.effectiveDate ?? undefined,
+      summary: definition.summary, affectedObligations: definition.affectedObligations,
+      officialSourceUrl: definition.officialSourceUrl, currentVersionId: definition.currentVersionId,
+      previousVersionId: definition.previousVersionId ?? undefined, currentEvidenceId: definition.currentEvidenceId,
+      lastVerifiedAt: definition.lastVerifiedAt.toISOString(), applicability,
     }];
   });
   const filtered = filterAndSortChanges(items, filters);

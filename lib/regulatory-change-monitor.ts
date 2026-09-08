@@ -22,14 +22,38 @@ export type ChangeEvidenceChain = {
   evidenceReviewStatus: string;
   evidenceUrl: string;
   officialSourceUrl: string;
+  definitionChangeType: string;
+  definitionDocumentId: string;
+  definitionPreviousVersionId?: number | null;
+  definitionCurrentVersionId: number;
+  definitionCurrentEvidenceId: number;
+  definitionSummary: string;
+  definitionAffectedObligations: string[];
+  definitionIssuedDate?: string | null;
+  definitionEffectiveDate?: string | null;
+  definitionOfficialSourceUrl: string;
+  definitionEvidenceStatus: string;
+  definitionLastVerifiedAt?: Date | string | null;
 };
 
 export function isDefinitiveChange(chain: ChangeEvidenceChain): boolean {
-  if (chain.previousVersionId !== null && chain.previousVersionId !== undefined && chain.previousVersionId === chain.currentVersionId) return false;
-  const previousOk = chain.previousVersionId === null || chain.previousVersionId === undefined
+  const previousId = chain.definitionPreviousVersionId;
+  if (chain.definitionCurrentVersionId !== chain.currentVersionId
+    || chain.definitionCurrentEvidenceId !== chain.evidenceId
+    || chain.definitionChangeType === "new-regulation" && previousId !== null && previousId !== undefined
+    || chain.definitionChangeType !== "new-regulation" && (previousId === null || previousId === undefined)
+    || previousId !== null && previousId !== undefined && previousId === chain.definitionCurrentVersionId) return false;
+  const previousOk = previousId === null || previousId === undefined
     ? true
-    : chain.previousVersionDocumentId === chain.documentId && chain.previousVersionReviewStatus === "verified";
-  return chain.documentId === chain.currentVersionDocumentId
+    : chain.previousVersionId === previousId
+      && chain.previousVersionDocumentId === chain.documentId && chain.previousVersionReviewStatus === "verified";
+  return chain.documentId === chain.definitionDocumentId
+    && chain.documentId === chain.currentVersionDocumentId
+    && CHANGE_TYPES.includes(chain.definitionChangeType as ChangeType)
+    && chain.definitionSummary.trim().length > 0
+    && chain.definitionOfficialSourceUrl === chain.officialSourceUrl
+    && chain.definitionEvidenceStatus === "official-verified"
+    && Boolean(chain.definitionLastVerifiedAt)
     && chain.documentEvidenceStatus === "official-verified"
     && chain.documentVerifiedVersionId === chain.currentVersionId
     && Boolean(chain.documentLastVerifiedAt)
@@ -56,6 +80,7 @@ export type ChangeItem = {
   previousVersionId?: number;
   currentEvidenceId: number;
   lastVerifiedAt: string;
+  definitionId?: string;
   applicability: "applies" | "not-applicable" | "insufficient-information" | "not-assessed";
 };
 
