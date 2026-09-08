@@ -17,3 +17,4 @@ export {
 } from "../lib/company-profile-schema";
 export { complianceCalendarItems, regulatoryDeadlineDefinitions } from "../lib/compliance-calendar-schema";
 export { regulatoryChangeDefinitions, regulatoryChangeAlerts } from "../lib/regulatory-change-schema";
+export { regulatoryTaxRules } from "../lib/tax-reserve-schema";
