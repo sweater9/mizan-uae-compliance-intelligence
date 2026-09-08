@@ -78,6 +78,19 @@ dd{font-weight:bold}
 .month>b{font:24px Georgia}
 .month button{display:flex;gap:18px;width:100%;padding:12px;border:0;background:white;text-align:left}
 .month button>span{width:34px;height:34px;display:grid;place-items:center;background:var(--pale);color:var(--green);font-weight:bold}
+.profile-nav,.profile-back{color:var(--green);text-decoration:none;font-size:13px;padding:12px}
+.profile-back{margin-left:auto}
+.calendar-page{max-width:1100px;margin:0 auto;padding:70px 6vw 100px}
+.calendar-page h1{font:500 clamp(44px,6vw,76px) Georgia;letter-spacing:-.04em;margin:14px 0}
+.calendar-lead{max-width:700px;color:var(--muted);line-height:1.7}
+.calendar-stats{display:grid;grid-template-columns:repeat(4,1fr);background:white;border:1px solid var(--line);margin:38px 0 24px}
+.calendar-stats article{padding:24px;border-right:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.calendar-stats span{color:var(--muted);font-size:12px}.calendar-stats b{font:34px Georgia;color:var(--green)}
+.calendar-empty{background:white;border:1px solid var(--line);padding:34px;margin-top:38px}.calendar-empty h2{font:28px Georgia;margin-top:0}.calendar-empty p{color:var(--muted);line-height:1.7}
+.calendar-link{display:inline-block;text-decoration:none;margin-top:12px}
+.calendar-card{background:white;border:1px solid var(--line);padding:26px;margin:14px 0;display:grid;grid-template-columns:1.4fr .7fr;gap:28px}
+.calendar-card h2{font:27px Georgia;margin:10px 0}.calendar-card p{color:var(--muted);line-height:1.6}.calendar-card small{display:block;color:var(--muted);font-size:11px;margin-top:12px}.calendar-date{text-transform:uppercase;font-size:10px!important;letter-spacing:.08em}.calendar-card a{display:block;color:var(--green);margin-top:16px;font-size:12px}
+@media(max-width:700px){.calendar-stats{grid-template-columns:repeat(2,1fr)}.calendar-card{grid-template-columns:1fr}.calendar-page{padding-top:42px}}
 .month button div{display:flex;flex-direction:column;gap:4px}
 .month small{color:var(--muted)}
 .modal{position:fixed;inset:0;background:#102019aa;display:grid;place-items:center;padding:20px;z-index:10}

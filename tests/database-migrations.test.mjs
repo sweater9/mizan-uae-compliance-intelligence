@@ -4,6 +4,8 @@ import { readFile } from "node:fs/promises";
 import { checkDatabaseReadiness, REQUIRED_MIGRATION_TIMESTAMP } from "../lib/database-readiness.ts";
 
 const migrationUrl = new URL("../drizzle/0000_left_justin_hammer.sql", import.meta.url);
+const calendarMigrationUrl = new URL("../drizzle/0002_compliance_calendar.sql", import.meta.url);
+const provenanceMigrationUrl = new URL("../drizzle/0003_loving_viper.sql", import.meta.url);
 const journalUrl = new URL("../drizzle/meta/_journal.json", import.meta.url);
 
 function mockNeon(...responses) {
@@ -21,7 +23,8 @@ test("migration metadata is PostgreSQL and identifies the readiness baseline", a
   assert.ok(journal.entries.length >= 1);
   assert.equal(journal.entries[0].when, REQUIRED_MIGRATION_TIMESTAMP);
   assert.equal(journal.entries[0].tag, "0000_left_justin_hammer");
-  assert.equal(journal.entries.at(-1).tag, "0001_company_profile_applicability");
+  assert.match(journal.entries.at(-1).tag, /^0003_/);
+  assert.ok(journal.entries.every((entry, index) => index === 0 || entry.when > journal.entries[index - 1].when));
 });
 
 test("initial migration creates constrained evidence and verified-version model", async () => {
@@ -39,6 +42,20 @@ test("initial migration creates constrained evidence and verified-version model"
     "version.review_status = 'verified'",
     "evidence.review_status = 'verified'",
   ]) assert.match(migration, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+});
+
+test("calendar migration creates a normalized evidence-bound deadline definition", async () => {
+  const migration = await readFile(calendarMigrationUrl, "utf8");
+  assert.match(migration, /CREATE TABLE "compliance_calendar_items"/);
+  assert.ok(migration.indexOf('CREATE TABLE "compliance_calendar_items"') < migration.indexOf('ALTER TABLE "compliance_calendar_items"'));
+  assert.doesNotMatch(migration, /deadline_definition_id/);
+  const provenance = await readFile(provenanceMigrationUrl, "utf8");
+  assert.match(provenance, /CREATE TABLE "regulatory_deadline_definitions"/);
+  assert.ok(provenance.indexOf('CREATE TABLE "regulatory_deadline_definitions"') < provenance.indexOf('ALTER TABLE "compliance_calendar_items" ADD COLUMN "deadline_definition_id"'));
+  assert.match(provenance, /"verified_version_id" integer NOT NULL/);
+  assert.match(provenance, /"evidence_id" integer NOT NULL/);
+  assert.match(provenance, /ADD COLUMN "deadline_definition_id" text NOT NULL/);
+  assert.match(provenance, /compliance_calendar_items_deadline_definition_id/);
 });
 
 test("readiness fails closed when schema or migration metadata is absent", async () => {

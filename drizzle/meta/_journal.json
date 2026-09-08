@@ -15,6 +15,20 @@
       "when": 1788950000000,
       "tag": "0001_company_profile_applicability",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789000000000,
+      "tag": "0002_compliance_calendar",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789000000001,
+      "tag": "0003_loving_viper",
+      "breakpoints": true
     }
   ]
 }
