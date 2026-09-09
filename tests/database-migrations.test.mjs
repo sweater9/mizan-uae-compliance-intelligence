@@ -23,7 +23,7 @@ test("migration metadata is PostgreSQL and identifies the readiness baseline", a
   assert.ok(journal.entries.length >= 1);
   assert.equal(journal.entries[0].when, REQUIRED_MIGRATION_TIMESTAMP);
   assert.equal(journal.entries[0].tag, "0000_left_justin_hammer");
-  assert.match(journal.entries.at(-1).tag, /^0006_/);
+  assert.match(journal.entries.at(-1).tag, /^0007_/);
   assert.ok(journal.entries.every((entry, index) => index === 0 || entry.when > journal.entries[index - 1].when));
 });
 
