@@ -2,6 +2,14 @@ name: Production Database Gate
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "drizzle/**"
+      - "drizzle.config.ts"
+      - "scripts/migrate-postgres.mjs"
+      - "scripts/check-postgres.mjs"
+      - ".github/workflows/production-database.yml"
 
 permissions:
   contents: read
