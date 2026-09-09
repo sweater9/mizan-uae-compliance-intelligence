@@ -4,6 +4,7 @@ import { applicabilityAssessments, applicabilityResults, companyProfiles } from 
 import { regulatoryDocuments, regulatoryEvidence, regulatoryVersions } from "../lib/regulatory-schema";
 import { evaluateApplicability, type CompanyProfile, type RegulatoryRecord } from "../lib/applicability";
 import { validateCompanyProfile } from "../lib/profile-validation";
+import { authErrorResponse, requireWorkspaceAccess } from "../lib/auth";
 
 const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers });
@@ -68,11 +69,19 @@ export async function handleCompanyProfile(request: Request) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { ...headers, Allow: "GET, POST, PUT, OPTIONS" } });
   const db = database();
   if (!db) return json({ error: "Profile storage is temporarily unavailable." }, 503);
+  let workspaceId = new URL(request.url).searchParams.get("workspaceId") || "";
+  if (request.method !== "GET") {
+    try {
+      const payload = await request.clone().json() as { workspaceId?: unknown };
+      workspaceId = typeof payload.workspaceId === "string" ? payload.workspaceId : workspaceId;
+    } catch { /* body validation below returns a useful JSON error */ }
+  }
+  try { await requireWorkspaceAccess(request, workspaceId); } catch (error) { return authErrorResponse(error) ?? json({ error: "Authentication could not be verified." }, 401); }
   try {
     if (request.method === "GET") {
       const id = new URL(request.url).searchParams.get("id");
       if (!id || id.length > 100) return json({ error: "A valid profile id is required." }, 400);
-      const rows = await db.select().from(companyProfiles).where(eq(companyProfiles.id, id)).limit(1);
+      const rows = await db.select().from(companyProfiles).where(and(eq(companyProfiles.id, id), eq(companyProfiles.workspaceId, workspaceId))).limit(1);
       return rows[0] ? json({ profile: asProfile(rows[0]) }) : json({ error: "Company profile not found." }, 404);
     }
     if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") return json({ error: "Send a JSON profile." }, 415);
@@ -80,6 +89,7 @@ export async function handleCompanyProfile(request: Request) {
     try { body = await readBody(request); } catch (error) { return json({ error: error instanceof RangeError ? "The profile request is too large." : "Send a valid JSON profile." }, 400); }
     const profileId = request.method === "PUT" && body && typeof body === "object" && "id" in body && typeof body.id === "string" ? body.id : crypto.randomUUID();
     const input = body && typeof body === "object" ? { ...(body as Record<string, unknown>) } : body;
+    if (input && typeof input === "object" && !Array.isArray(input)) delete (input as Record<string, unknown>).workspaceId;
     if (input && typeof input === "object" && !Array.isArray(input)) delete (input as Record<string, unknown>).id;
     const validated = validateCompanyProfile(input);
     if (!validated.profile) return json({ error: "Invalid company profile.", details: validated.errors }, 400);
@@ -93,10 +103,10 @@ export async function handleCompanyProfile(request: Request) {
       dnfbpCategory: p.dnfbpCategory ?? null, freeZoneStatus: p.freeZoneStatus ?? null, updatedAt: new Date(),
     };
     if (request.method === "PUT") {
-      const updated = await db.update(companyProfiles).set(values).where(eq(companyProfiles.id, profileId)).returning();
+      const updated = await db.update(companyProfiles).set(values).where(and(eq(companyProfiles.id, profileId), eq(companyProfiles.workspaceId, workspaceId))).returning();
       return updated[0] ? json({ profile: asProfile(updated[0]) }) : json({ error: "Company profile not found." }, 404);
     }
-    const inserted = await db.insert(companyProfiles).values({ id: profileId, ownerKey: null, ...values }).returning();
+    const inserted = await db.insert(companyProfiles).values({ id: profileId, workspaceId, ownerKey: null, ...values }).returning();
     return json({ profile: asProfile(inserted[0]) }, 201);
   } catch { return json({ error: "The company profile could not be saved." }, 500); }
 }
@@ -107,9 +117,11 @@ export async function handleApplicability(request: Request) {
   const db = database();
   if (!db) return json({ error: "Applicability storage is temporarily unavailable." }, 503);
   try {
-    const body = await readBody(request) as { profileId?: unknown };
+    const body = await readBody(request) as { profileId?: unknown; workspaceId?: unknown };
     if (typeof body?.profileId !== "string" || body.profileId.length > 100) return json({ error: "profileId is required." }, 400);
-    const profileRows = await db.select().from(companyProfiles).where(eq(companyProfiles.id, body.profileId)).limit(1);
+    const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : new URL(request.url).searchParams.get("workspaceId") || "";
+    await requireWorkspaceAccess(request, workspaceId);
+    const profileRows = await db.select().from(companyProfiles).where(and(eq(companyProfiles.id, body.profileId), eq(companyProfiles.workspaceId, workspaceId))).limit(1);
     if (!profileRows[0]) return json({ error: "Company profile not found." }, 404);
     // Applicability only evaluates current instruments; the evidence gate below
     // separately determines whether a definitive result is possible.
@@ -155,18 +167,22 @@ export async function handleApplicability(request: Request) {
       triggeredAttributes: result.triggeredAttributes, missingInformation: result.missingInformation, reasoning: result.reasoning,
     })));
     return json({ assessmentId, profile: asProfile(profileRows[0]), results });
-  } catch { return json({ error: "Applicability evaluation failed safely. Please try again." }, 500); }
+  } catch (error) { return authErrorResponse(error) ?? json({ error: "Applicability evaluation failed safely. Please try again." }, 500); }
 }
 
 export async function handleAssessment(request: Request) {
   if (request.method !== "GET") return json({ error: "Method not allowed." }, 405);
   const id = new URL(request.url).searchParams.get("id");
   if (!id || id.length > 100) return json({ error: "A valid assessment id is required." }, 400);
+  const workspaceId = new URL(request.url).searchParams.get("workspaceId") || "";
   const db = database();
   if (!db) return json({ error: "Assessment storage is temporarily unavailable." }, 503);
   try {
+    await requireWorkspaceAccess(request, workspaceId);
     const assessment = await db.select().from(applicabilityAssessments).where(eq(applicabilityAssessments.id, id)).limit(1);
     if (!assessment[0]) return json({ error: "Applicability assessment not found." }, 404);
+    const ownedProfile = await db.select({ id: companyProfiles.id }).from(companyProfiles).where(and(eq(companyProfiles.id, assessment[0].profileId), eq(companyProfiles.workspaceId, workspaceId))).limit(1);
+    if (!ownedProfile[0]) return json({ error: "Applicability assessment not found." }, 404);
     const rows = await db.select().from(applicabilityResults).where(eq(applicabilityResults.assessmentId, id)).orderBy(desc(applicabilityResults.createdAt));
     const records = await db.select().from(regulatoryDocuments);
     const byId = new Map(records.map((record) => [record.id, asRecord(record)]));
@@ -174,5 +190,5 @@ export async function handleAssessment(request: Request) {
       const record = byId.get(row.regulatoryDocumentId);
       return { regulatoryRecordId: row.regulatoryDocumentId, title: record?.title ?? "Regulatory record unavailable", state: row.state, triggeredAttributes: row.triggeredAttributes, missingInformation: row.missingInformation, reasoning: row.reasoning, authority: record?.authorities ?? [], sourceUrl: record?.sourceUrl ?? "", evidenceStatus: record?.evidenceStatus ?? "official-source-pending-review", reviewStatus: record?.reviewStatus ?? "pending" };
     }) });
-  } catch { return json({ error: "Assessment storage is temporarily unavailable." }, 503); }
+  } catch (error) { return authErrorResponse(error) ?? json({ error: "Assessment storage is temporarily unavailable." }, 503); }
 }

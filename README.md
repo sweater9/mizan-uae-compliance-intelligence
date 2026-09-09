@@ -139,6 +139,16 @@ or enforce explicit server-side membership or allowlist checks.
 Use SIWC for account pages, user-specific dashboards, saved records, and write
 actions tied to the current ChatGPT user. Leave public content anonymous.
 
+## Production authentication and workspaces
+
+Company Profile, applicability assessments, Compliance Calendar, and Change
+Monitor require a signed session presented as `Authorization: Bearer <JWT>` or
+the `mizan_session` cookie. The server validates an RS256 token against the
+configured JWKS and then requires membership in the requested workspace. Set
+`MIZAN_AUTH_JWKS_URL`, `MIZAN_AUTH_ISSUER`, `MIZAN_AUTH_AUDIENCE`, and the
+optional `MIZAN_AUTH_PROVIDER` (default `default`) as server-only variables.
+Public Regulatory Search and Ask Mizan remain anonymous.
+
 ## Diagnostic Commands
 
 - `npm run install:ci`: perform the one bounded lockfile install

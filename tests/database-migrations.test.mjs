@@ -23,8 +23,22 @@ test("migration metadata is PostgreSQL and identifies the readiness baseline", a
   assert.ok(journal.entries.length >= 1);
   assert.equal(journal.entries[0].when, REQUIRED_MIGRATION_TIMESTAMP);
   assert.equal(journal.entries[0].tag, "0000_left_justin_hammer");
-  assert.match(journal.entries.at(-1).tag, /^0005_/);
+  assert.match(journal.entries.at(-1).tag, /^0007_/);
   assert.ok(journal.entries.every((entry, index) => index === 0 || entry.when > journal.entries[index - 1].when));
+});
+
+test("auth workspace migration creates tenant identity and membership boundaries", async () => {
+  const migration = await readFile(new URL("../drizzle/0006_auth_workspace_foundation.sql", import.meta.url), "utf8");
+  for (const required of [
+    'CREATE TABLE "users"',
+    'CREATE TABLE "identities"',
+    'CREATE TABLE "workspaces"',
+    'CREATE TABLE "workspace_memberships"',
+    'CREATE UNIQUE INDEX "identities_provider_subject_idx"',
+    'CREATE UNIQUE INDEX "workspace_memberships_workspace_user_idx"',
+    'ALTER TABLE "company_profiles" ADD COLUMN "workspace_id"',
+    'company_profiles_workspace_id_workspaces_id_fk',
+  ]) assert.match(migration, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 });
 
 test("change monitor migration creates an alert table linked to verified source records", async () => {
