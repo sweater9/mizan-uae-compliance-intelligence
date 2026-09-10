@@ -82,7 +82,10 @@ try {
     const status = result.failures.length === 0 ? "succeeded" : result.checkedSources > 0 ? "partial" : "failed";
     await finish(status);
     console.log(JSON.stringify({ runId, status, ...result }));
-    if (status === "failed") process.exitCode = 1;
+    // A partial regulatory refresh is operationally incomplete. Keep the
+    // successfully processed evidence, but fail the workflow so missing
+    // authoritative sources cannot be mistaken for a healthy daily update.
+    if (status !== "succeeded") process.exitCode = 1;
   }
 } catch (error) {
   try { await finish("failed"); } catch {}
