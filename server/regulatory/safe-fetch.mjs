@@ -59,6 +59,14 @@ function requestOnce(url, headers, config) {
   });
 }
 
+function equivalentOfficialSourceUrl(url) {
+  const candidate = new URL(url);
+  if (candidate.hostname === "uaelegislation.gov.ae") candidate.hostname = "www.uaelegislation.gov.ae";
+  else if (candidate.hostname === "www.uaelegislation.gov.ae") candidate.hostname = "uaelegislation.gov.ae";
+  else return null;
+  return candidate;
+}
+
 async function requestWithOfficialSourceCompatibility(url, headers, config) {
   const response = await requestOnce(url, headers, config);
   if (response.statusCode !== 403) return response;
@@ -66,9 +74,19 @@ async function requestWithOfficialSourceCompatibility(url, headers, config) {
   // Some official regulator/legislation sites reject non-browser default headers
   // even for public documents. Retry the exact same allowlisted URL once with a
   // browser-compatible, Mizan-identifying header set. This does not bypass an
-  // authentication challenge, change hosts, or weaken the SSRF/redirect checks.
+  // authentication challenge or weaken DNS/SSRF protections.
   response.resume();
-  return requestOnce(url, { ...COMPATIBILITY_HEADERS, ...headers }, config);
+  const compatible = await requestOnce(url, { ...COMPATIBILITY_HEADERS, ...headers }, config);
+  if (compatible.statusCode !== 403) return compatible;
+
+  // UAE Legislation publishes the same public corpus on both the apex and www
+  // government hostnames. If one edge rejects the scheduled runner, retry the
+  // identical path/query once on the equivalent official hostname. No arbitrary
+  // fallback host is accepted and validatingLookup still rejects private IPs.
+  const alternate = equivalentOfficialSourceUrl(url);
+  if (!alternate) return compatible;
+  compatible.resume();
+  return requestOnce(alternate, { ...COMPATIBILITY_HEADERS, ...headers }, config);
 }
 
 export async function safeFetch(startUrl, headers, config) {
@@ -83,6 +101,9 @@ export async function safeFetch(startUrl, headers, config) {
       if (redirects === config.maxRedirects) throw Object.assign(new Error("Too many redirects"), { code: "REDIRECT_LIMIT" });
       if (!response.headers.location) throw Object.assign(new Error("Redirect missing Location"), { code: "INVALID_REDIRECT" });
       url = new URL(response.headers.location, url);
+      // The only acquisition fallback that may switch hostnames is the explicit
+      // UAE Legislation apex/www equivalence above. Redirects remain constrained
+      // to the caller-provided canonical host allowlist.
       continue;
     }
     if (response.statusCode === 304) { response.resume(); return { status: 304, url: url.href, headers: response.headers, body: null }; }
