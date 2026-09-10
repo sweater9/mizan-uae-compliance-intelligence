@@ -3,6 +3,15 @@ import https from "node:https";
 import net from "node:net";
 
 const CONTENT_TYPES = new Set(["text/html", "text/plain", "application/json", "application/pdf", "application/xml", "text/xml"]);
+const DEFAULT_HEADERS = {
+  "user-agent": "Mizan-Regulatory-Ingestion/1.1",
+  accept: "text/html,text/plain,application/json,application/pdf,application/xml",
+};
+const COMPATIBILITY_HEADERS = {
+  "user-agent": "Mozilla/5.0 (compatible; Mizan-Regulatory-Ingestion/1.1; +https://mizan-uae-compliance-intelligence.onrender.com)",
+  accept: "text/html,application/xhtml+xml,application/xml;q=0.9,application/pdf;q=0.8,text/plain;q=0.7,*/*;q=0.5",
+  "accept-language": "en-US,en;q=0.9",
+};
 
 export function isPublicAddress(address) {
   if (net.isIPv4(address)) {
@@ -35,7 +44,7 @@ function requestOnce(url, headers, config) {
   return new Promise((resolve, reject) => {
     const request = https.request(url, {
       method: "GET",
-      headers: { "user-agent": "Mizan-Regulatory-Ingestion/1.0", accept: "text/html,text/plain,application/json,application/pdf,application/xml", ...headers },
+      headers: { ...DEFAULT_HEADERS, ...headers },
       lookup: validatingLookup,
       timeout: config.requestTimeoutMs,
     }, resolve);
@@ -50,13 +59,25 @@ function requestOnce(url, headers, config) {
   });
 }
 
+async function requestWithOfficialSourceCompatibility(url, headers, config) {
+  const response = await requestOnce(url, headers, config);
+  if (response.statusCode !== 403) return response;
+
+  // Some official regulator/legislation sites reject non-browser default headers
+  // even for public documents. Retry the exact same allowlisted URL once with a
+  // browser-compatible, Mizan-identifying header set. This does not bypass an
+  // authentication challenge, change hosts, or weaken the SSRF/redirect checks.
+  response.resume();
+  return requestOnce(url, { ...COMPATIBILITY_HEADERS, ...headers }, config);
+}
+
 export async function safeFetch(startUrl, headers, config) {
   let url = new URL(startUrl);
   for (let redirects = 0; redirects <= config.maxRedirects; redirects += 1) {
     if (url.protocol !== "https:" || url.username || url.password || url.port || !config.allowedHosts.has(url.hostname.toLowerCase())) {
       throw Object.assign(new Error("Redirect target is not an allowlisted credential-free HTTPS host"), { code: "REDIRECT_BLOCKED" });
     }
-    const response = await requestOnce(url, headers, config);
+    const response = await requestWithOfficialSourceCompatibility(url, headers, config);
     if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
       response.resume();
       if (redirects === config.maxRedirects) throw Object.assign(new Error("Too many redirects"), { code: "REDIRECT_LIMIT" });
