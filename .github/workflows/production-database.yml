@@ -30,6 +30,8 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - name: Install migration-only PostgreSQL client
+        run: npm install --no-save --package-lock=false pg@8.16.3
       - name: Require production database secret
         shell: bash
         env:
@@ -40,7 +42,7 @@ jobs:
             exit 1
           fi
       - name: Apply PostgreSQL migrations
-        run: npm run db:migrate
+        run: node scripts/migrate-postgres.mjs
         env:
           MIZAN_DATABASE_URL: ${{ secrets.MIZAN_DATABASE_URL }}
       - name: Verify production database readiness
