@@ -19,17 +19,28 @@ jobs:
     timeout-minutes: 20
     environment: production
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-      - run: npm ci
-      - name: Validate update implementation
-        run: npm run typecheck
-      - name: Run regulatory update
-        if: ${{ hashFiles('scripts/regulatory-update.mjs') != '' }}
-        run: node scripts/regulatory-update.mjs
+      - name: Trigger production-origin regulatory update
         env:
           MIZAN_INGESTION_API_KEY: ${{ secrets.MIZAN_INGESTION_API_KEY }}
-          MIZAN_DATABASE_URL: ${{ secrets.MIZAN_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          test -n "$MIZAN_INGESTION_API_KEY"
+          response_file="$(mktemp)"
+          http_code="$(curl --silent --show-error --location \
+            --connect-timeout 15 \
+            --max-time 180 \
+            --retry 2 \
+            --retry-all-errors \
+            --output "$response_file" \
+            --write-out '%{http_code}' \
+            --request POST \
+            --header "Authorization: Bearer $MIZAN_INGESTION_API_KEY" \
+            --header "Content-Type: application/json" \
+            --data '{}' \
+            https://mizan-uae-compliance-intelligence.onrender.com/api/internal/regulatory-update)"
+          cat "$response_file"
+          echo
+          if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
+            echo "Production regulatory update failed with HTTP $http_code" >&2
+            exit 1
+          fi
