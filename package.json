@@ -24,11 +24,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.0.2",
     "drizzle-orm": "0.45.2",
     "next": "16.3.4",
     "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "react-dom": "19.2.6",
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",

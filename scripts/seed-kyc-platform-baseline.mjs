@@ -1,9 +1,9 @@
 import crypto from "node:crypto";
-import { neon } from "@neondatabase/serverless";
+import postgres from "postgres";
 
 const databaseUrl = process.env.MIZAN_DATABASE_URL?.trim();
 if (!databaseUrl) throw new Error("Missing MIZAN_DATABASE_URL");
-const sql = neon(databaseUrl);
+const sql = postgres(databaseUrl, { prepare: false });
 const verifiedAt = new Date().toISOString();
 const reviewer = "mizan-production-baseline-2026-09-08";
 
@@ -55,3 +55,4 @@ for (const r of records) {
   await sql`update regulatory_documents set verified_version_id=${versionId}, evidence_status='official-verified', last_verified_at=${verifiedAt} where id=${r.id}`;
 }
 console.log(`Verified KYC platform baseline ready: ${records.length} records.`);
+await sql.end();

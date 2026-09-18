@@ -1,4 +1,5 @@
 import { apiHeaders, enterRequest, preflight } from "../../../lib/api-security";
+import { safeDatabaseError } from "../../../lib/database-config";
 import { getRegulatoryRepository, RegulatoryDatabaseUnavailableError } from "../../../lib/regulatory-repository";
 import type { RegulatoryStatus } from "../../../lib/regulatory-types";
 
@@ -46,11 +47,11 @@ export async function GET(request: Request) {
     }, { headers });
   } catch (error) {
     if (error instanceof RegulatoryDatabaseUnavailableError) {
-      console.error("Regulatory search database unavailable", { name: error.name, message: error.message });
+      console.error("Regulatory search database unavailable", safeDatabaseError(error));
     } else if (error instanceof Error) {
-      console.error("Regulatory search failed", { name: error.name, message: error.message, stack: error.stack });
+      console.error("Regulatory search failed", safeDatabaseError(error));
     } else {
-      console.error("Regulatory search failed", { error: String(error) });
+      console.error("Regulatory search failed", safeDatabaseError(error));
     }
     return Response.json({ error: "Regulatory search temporarily unavailable." }, { status: 503, headers });
   } finally { guard.release(); }

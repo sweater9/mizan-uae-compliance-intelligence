@@ -1,10 +1,10 @@
 import crypto from "node:crypto";
-import { neon } from "@neondatabase/serverless";
+import postgres from "postgres";
 import { loadAndValidateMigratedCorpus, normalizeInstrument } from "./validate-migrated-corpus.mjs";
 
 const databaseUrl = process.env.MIZAN_DATABASE_URL?.trim();
 if (!databaseUrl) throw new Error("Missing MIZAN_DATABASE_URL");
-const sql = neon(databaseUrl);
+const sql = postgres(databaseUrl, { prepare: false });
 const { records } = loadAndValidateMigratedCorpus();
 const fetchedAt = new Date().toISOString();
 
@@ -74,3 +74,4 @@ for (const record of records) {
 }
 
 console.log(`Migrated corpus seed complete: ${added} pending-review records added; ${skipped} production duplicates skipped.`);
+await sql.end();

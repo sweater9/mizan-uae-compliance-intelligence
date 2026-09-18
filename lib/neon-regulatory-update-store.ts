@@ -67,7 +67,7 @@ export async function finishRegulatoryUpdateRun(runId: string, result: { checked
 export async function acquireRegulatoryUpdateLock() {
   const db = getDatabase();
   const result = await db.execute(sql`select pg_try_advisory_lock(hashtext('mizan-regulatory-update')) as acquired`);
-  return Boolean((result.rows?.[0] as { acquired?: boolean } | undefined)?.acquired);
+  return Boolean((result[0] as { acquired?: boolean } | undefined)?.acquired);
 }
 
 export async function releaseRegulatoryUpdateLock() {

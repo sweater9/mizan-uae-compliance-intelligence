@@ -1,4 +1,4 @@
-import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
+import postgres from "postgres";
 
 export const REQUIRED_MIGRATION_TIMESTAMP = 1788685698753;
 
@@ -23,13 +23,20 @@ type IntegrityRow = {
   invalid_verified_documents: number | string;
 };
 
-export async function checkDatabaseReadiness(client?: NeonQueryFunction<false, false>): Promise<DatabaseReadiness> {
+type ReadinessSql = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
+
+export async function checkDatabaseReadiness(client?: ReadinessSql): Promise<DatabaseReadiness> {
   const databaseUrl = process.env.MIZAN_DATABASE_URL?.trim();
   if (!client && !databaseUrl) {
     return { ready: false, migrationsCurrent: false, schemaPresent: false, integrityValid: false, reason: "MIZAN_DATABASE_URL is not configured." };
   }
 
-  const sql = client ?? neon(databaseUrl!);
+  const ownsClient = !client;
+  const sql = client ?? postgres(databaseUrl!, { prepare: false });
+  const finish = async (result: DatabaseReadiness) => {
+    if (ownsClient) await (sql as ReturnType<typeof postgres>).end();
+    return result;
+  };
   const [catalog] = await sql`
     select
       to_regclass('public.regulatory_sources') is not null
@@ -41,13 +48,13 @@ export async function checkDatabaseReadiness(client?: NeonQueryFunction<false, f
   ` as ReadinessRow[];
 
   if (!catalog?.schema_present || !catalog.migrations_table_present) {
-    return {
+    return finish({
       ready: false,
       migrationsCurrent: false,
       schemaPresent: Boolean(catalog?.schema_present),
       integrityValid: false,
       reason: !catalog?.schema_present ? "Regulatory database schema is incomplete." : "Drizzle migration metadata is missing.",
-    };
+    });
   }
 
   const [migration] = await sql`
@@ -55,7 +62,7 @@ export async function checkDatabaseReadiness(client?: NeonQueryFunction<false, f
     from drizzle.__drizzle_migrations
   ` as MigrationRow[];
   if (!migration?.migrations_current) {
-    return { ready: false, migrationsCurrent: false, schemaPresent: true, integrityValid: false, reason: "Database migrations are not current." };
+    return finish({ ready: false, migrationsCurrent: false, schemaPresent: true, integrityValid: false, reason: "Database migrations are not current." });
   }
 
   const [integrity] = await sql`
@@ -75,16 +82,16 @@ export async function checkDatabaseReadiness(client?: NeonQueryFunction<false, f
   ` as IntegrityRow[];
   const integrityValid = Number(integrity?.invalid_verified_documents ?? 1) === 0;
 
-  return {
+  return finish({
     ready: integrityValid,
     migrationsCurrent: true,
     schemaPresent: true,
     integrityValid,
     reason: integrityValid ? undefined : "Verified regulatory documents have invalid version or evidence relationships.",
-  };
+  });
 }
 
-export async function assertDatabaseReady(client?: NeonQueryFunction<false, false>) {
+export async function assertDatabaseReady(client?: ReadinessSql) {
   const readiness = await checkDatabaseReadiness(client);
   if (!readiness.ready) throw new Error(readiness.reason ?? "Database is not ready.");
   return readiness;
