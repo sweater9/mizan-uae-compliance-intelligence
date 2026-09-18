@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { neon } from "@neondatabase/serverless";
+import postgres from "postgres";
 import { safeFetch } from "../server/regulatory/safe-fetch.mjs";
 
 const databaseUrl = process.env.MIZAN_DATABASE_URL?.trim();
@@ -8,7 +8,7 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-const sql = neon(databaseUrl);
+const sql = postgres(databaseUrl, { prepare: false });
 const runId = crypto.randomUUID();
 const result = { checkedSources: 0, changedSources: 0, processedDocuments: 0, failures: [] };
 
@@ -92,4 +92,6 @@ try {
   console.error("Mizan regulatory update failed before completion.");
   if (error instanceof Error) console.error(error.message);
   process.exitCode = 1;
+} finally {
+  await sql.end();
 }

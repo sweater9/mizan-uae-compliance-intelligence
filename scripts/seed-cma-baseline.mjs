@@ -1,9 +1,9 @@
 import crypto from "node:crypto";
-import { neon } from "@neondatabase/serverless";
+import postgres from "postgres";
 
 const databaseUrl = process.env.MIZAN_DATABASE_URL?.trim();
 if (!databaseUrl) throw new Error("Missing MIZAN_DATABASE_URL");
-const sql = neon(databaseUrl);
+const sql = postgres(databaseUrl, { prepare: false });
 const verifiedAt = new Date().toISOString();
 const reviewer = "mizan-production-baseline-2026-09-08";
 
@@ -55,3 +55,4 @@ for (const r of records) {
 }
 
 console.log(`Verified CMA baseline ready: ${records.length} records.`);
+await sql.end();
